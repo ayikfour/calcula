@@ -5,6 +5,8 @@
 
 Dimension speaks in a near-monochrome dark register: a near-black canvas, glassmorphic surfaces that float above it, and one muted indigo that surfaces only as accent punctuation. Typography is restrained and humanist — DM Sans for body, Geist for display — letting the 72px whisper-weight headlines carry the room without color needing to shout. Components are pill-shaped or soft-rounded; nearly every interactive element (buttons, nav, tags, the floating dock) uses a 9999px radius, while cards settle into 24–40px curves. The page breathes: generous vertical rhythm, thin hairline borders in #e5e5e5 at low opacity, and minimal elevation — depth comes from translucency and blur, not shadow stacks.
 
+> **Status note (2026-06-30):** this file originated as the style reference for an unrelated dark-glassmorphic *marketing landing page* — that's what everything from here through **Quick Start** describes (hero headlines, floating pill nav, 1200px desktop layout, etc.). It was reused as the token source for **Calcula**, a separate mobile PWA, with the colors/type/spacing/glassmorphism kept verbatim. Everything Calcula-specific lives in **App Patterns** below and **Implemented Theme (Calcula)** right after it — those two sections are the authoritative reference for that app; the sections above are historical/landing-page context, not things Calcula screens should match (no hero, no 1200px layout, no floating desktop nav).
+
 ## Tokens — Colors
 
 | Name | Value | Token | Role |
@@ -274,7 +276,7 @@ Centered column, 48px icon (stroke, #3d3d3d), heading DM Sans 18px weight 500 #e
 ### Form Field / Input
 **Role:** Text input in auth, onboarding, add-expense form
 
-Full-width, height 48px, background #1d1d1d, border 1px #e5e5e5 at 10% opacity, radius 10px (`--radius-inputs`). Padding 12px 16px. DM Sans 16px weight 400, color #e5e5e5 placeholder color #686868. Focus state: border color #e5e5e5 at 30% opacity, no glow/shadow. Never use a colored focus ring — depth is expressed through opacity shift only.
+Full-width, height 48px, background #1d1d1d, border 1px #e5e5e5 at 10% opacity, radius 10px (`--radius-input`). Padding 12px 16px. DM Sans 16px weight 400, color #e5e5e5 placeholder color #686868. Focus state: border color #e5e5e5 at 30% opacity, no glow/shadow. Never use a colored focus ring — depth is expressed through opacity shift only.
 
 ### Primary Button (White Pill)
 **Role:** Main submit/CTA in app screens
@@ -338,6 +340,83 @@ A fixed, muted 8-color set — one per seeded category, desaturated enough to si
 | Other | `#8a8a8a` (neutral gray) |
 
 Used only for chart fills/legends (donut segments, legend dots) — never for buttons, badges, or backgrounds elsewhere in the app.
+
+---
+
+## Implemented Theme (Calcula)
+
+The exact `@theme` block wired up in `src/index.css` — copy from here, not
+from **Quick Start** below, when working on Calcula. It's a trimmed subset
+of the original tokens (no display/hero type scale, no indigo gradient, no
+dawn-wash — none of those are used in the app) plus the success/danger
+semantic colors, which are missing from the original Quick Start block
+entirely. Two intentional naming differences from the rest of this doc:
+DM Sans is aliased to Tailwind's `--font-sans` slot (not `--font-dm-sans`),
+and radii are singular (`--radius-input`, `--radius-card`) rather than the
+plural names in Quick Start's "Named Radii" table.
+
+```css
+@theme {
+  /* Colors */
+  --color-void: #0a0a0a;
+  --color-char: #1d1d1d;
+  --color-iron: #3d3d3d;
+  --color-slate: #505050;
+  --color-smoke: #797979;
+  --color-graphite: #161616;
+  --color-ink: #282828;
+  --color-fog: #686868;
+  --color-mist: #c2c2c2;
+  --color-ash: #b2b2b2;
+  --color-bone: #e5e5e5;
+  --color-paper: #ffffff;
+  --color-onyx: #000000;
+  --color-indigo: #6b62f2;
+
+  /* Semantic — success/danger for balance screen, form errors */
+  --color-success: #4ade80;
+  --color-danger: #f87171;
+
+  /* Fonts */
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-geist: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Type scale */
+  --text-caption: 14px;
+  --text-body: 16px;
+  --text-body-lg: 18px;
+  --text-subheading: 24px;
+  --text-heading-sm: 32px;
+  --text-heading: 40px;
+  --text-heading-lg: 48px;
+
+  /* Spacing */
+  --spacing-4: 4px;
+  --spacing-8: 8px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-20: 20px;
+  --spacing-24: 24px;
+  --spacing-28: 28px;
+  --spacing-32: 32px;
+  --spacing-40: 40px;
+  --spacing-44: 44px;
+  --spacing-48: 48px;
+  --spacing-56: 56px;
+  --spacing-64: 64px;
+
+  /* Border radius */
+  --radius-input: 10px;
+  --radius-card: 24px;
+  --radius-container: 40px;
+  --radius-pill: 9999px;
+}
+```
+
+Indigo (`--color-indigo`) is defined but **not yet used anywhere in Calcula**
+— every screen so far has only needed the monochrome palette plus success/
+danger. It stays reserved for the same "glow accent only, never a fill"
+role as the original system if a future screen calls for it.
 
 ---
 
