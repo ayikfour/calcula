@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Check, Copy } from '@phosphor-icons/react'
 
 export function SettingsPage() {
   const { user, couple, signOut } = useAuth()
@@ -25,91 +28,60 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="p-6 space-y-5">
-      <h1 style={{ fontSize: '32px', fontWeight: 500, color: 'var(--color-bone)', letterSpacing: '-0.02em' }}>
+    <div className="space-y-5 p-6">
+      <h1 className="font-heading text-3xl font-medium tracking-tight text-foreground">
         Settings
       </h1>
 
       {/* Account */}
-      <div className="glass rounded-card p-5 space-y-2">
-        <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-fog)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+      <Card className="space-y-2 p-5">
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Account
         </p>
-        <p style={{ fontSize: '16px', color: 'var(--color-bone)' }}>{user?.email}</p>
+        <p className="text-base text-foreground">{user?.email}</p>
         {couple && (
-          <p style={{ fontSize: '14px', color: 'var(--color-mist)' }}>
-            Signed in as <span style={{ color: 'var(--color-bone)', fontWeight: 500 }}>{couple.display_name}</span>
+          <p className="text-sm text-muted-foreground">
+            Signed in as <span className="font-medium text-foreground">{couple.display_name}</span>
           </p>
         )}
-      </div>
+      </Card>
 
       {/* Invite code */}
       {couple && (
-        <div className="glass rounded-card p-5 space-y-3">
-          <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-fog)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <Card className="space-y-3 p-5">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Couple invite code
           </p>
-          <p style={{ fontSize: '13px', color: 'var(--color-mist)', lineHeight: 1.5 }}>
+          <p className="text-sm leading-relaxed text-muted-foreground">
             Share this with your partner so they can join your shared log.
           </p>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'var(--color-ink)',
-              borderRadius: '10px',
-              padding: '14px 16px',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'var(--font-geist)',
-                fontSize: '22px',
-                fontWeight: 500,
-                letterSpacing: '0.15em',
-                color: 'var(--color-bone)',
-              }}
-            >
+          <div className="flex items-center justify-between rounded-lg bg-muted px-4 py-3.5">
+            <span className="font-heading text-xl font-medium tracking-[0.15em] text-foreground">
               {inviteCode ?? '······'}
             </span>
             <button
               onClick={copyCode}
               disabled={!inviteCode}
-              style={{
-                fontSize: '13px',
-                fontWeight: 500,
-                color: copied ? 'var(--color-success)' : 'var(--color-ash)',
-                transition: 'color 150ms',
-                paddingLeft: '12px',
-              }}
+              className="flex items-center gap-1 pl-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
             >
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? (
+                <>
+                  <Check className="size-3.5" weight="bold" /> Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="size-3.5" /> Copy
+                </>
+              )}
             </button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Sign out */}
-      <button
-        onClick={signOut}
-        style={{
-          display: 'block',
-          width: '100%',
-          height: '48px',
-          borderRadius: 'var(--radius-pill)',
-          background: 'var(--color-iron)',
-          color: 'var(--color-bone)',
-          fontSize: '16px',
-          fontWeight: 500,
-          cursor: 'pointer',
-          transition: 'background 150ms',
-        }}
-        onMouseEnter={e => ((e.target as HTMLButtonElement).style.background = 'var(--color-slate)')}
-        onMouseLeave={e => ((e.target as HTMLButtonElement).style.background = 'var(--color-iron)')}
-      >
+      <Button onClick={signOut} variant="secondary" className="w-full">
         Sign out
-      </button>
+      </Button>
     </div>
   )
 }

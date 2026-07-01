@@ -2,6 +2,17 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import type { Expense, Category, CoupleMember } from '../types'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Chip } from '@/components/ui/chip'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 interface Props {
   isOpen: boolean
@@ -17,19 +28,6 @@ function formatAmount(raw: string): string {
   const [intPart, decPart] = raw.split('.')
   const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
   return decPart !== undefined ? `${grouped}.${decPart}` : grouped
-}
-
-const inputStyle: React.CSSProperties = {
-  display: 'block',
-  width: '100%',
-  height: '48px',
-  background: 'var(--color-ink)',
-  border: '1px solid rgba(229,229,229,0.12)',
-  borderRadius: 'var(--radius-input)',
-  padding: '12px 16px',
-  fontSize: '16px',
-  color: 'var(--color-bone)',
-  outline: 'none',
 }
 
 export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories, members }: Props) {
@@ -102,60 +100,21 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
   }
 
   const partner = members.find(m => m.user_id !== user?.id)
+  const payerOptions = [
+    { id: user?.id, label: 'You' },
+    { id: partner?.user_id, label: partner?.display_name ?? 'Partner' },
+  ]
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 60,
-          background: 'rgba(0,0,0,0.6)',
-          opacity: isOpen ? 1 : 0,
-          pointerEvents: isOpen ? 'auto' : 'none',
-          transition: 'opacity 250ms ease',
-        }}
-      />
+    <Sheet open={isOpen} onOpenChange={open => !open && onClose()}>
+      <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-2xl">
+        <SheetHeader>
+          <SheetTitle>{isEdit ? 'Edit expense' : 'Add expense'}</SheetTitle>
+        </SheetHeader>
 
-      {/* Sheet */}
-      <div
-        style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 70,
-          background: 'rgba(20,20,20,0.96)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          borderTop: '1px solid rgba(229,229,229,0.08)',
-          borderRadius: '24px 24px 0 0',
-          maxHeight: '92vh',
-          overflowY: 'auto',
-          transform: isOpen ? 'translateY(0)' : 'translateY(100%)',
-          transition: 'transform 280ms ease',
-          paddingBottom: 'calc(24px + var(--safe-bottom))',
-        }}
-      >
-        {/* Handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '4px' }}>
-          <div style={{ width: '36px', height: '4px', borderRadius: '9999px', background: 'var(--color-iron)' }} />
-        </div>
-
-        <div style={{ padding: '8px 20px 0' }}>
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 500, color: 'var(--color-bone)' }}>
-              {isEdit ? 'Edit expense' : 'Add expense'}
-            </h2>
-            <button
-              onClick={onClose}
-              style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-fog)' }}
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                <path d="M4 4l10 10M14 4L4 14" />
-              </svg>
-            </button>
-          </div>
-
+        <div className="space-y-4 px-4 pb-4">
           {/* Amount */}
-          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <div className="pb-1 text-center">
             <input
               type="text"
               inputMode="decimal"
@@ -165,173 +124,114 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
                 const raw = e.target.value.replace(/,/g, '')
                 if (/^\d*\.?\d*$/.test(raw)) setAmount(raw)
               }}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                fontFamily: 'var(--font-geist)',
-                fontSize: '48px',
-                fontWeight: 500,
-                color: 'var(--color-bone)',
-                textAlign: 'center',
-                width: '100%',
-              }}
+              className="font-heading w-full border-none bg-transparent text-center text-5xl font-medium text-foreground outline-none"
             />
-            <div style={{ width: '48px', height: '2px', background: 'rgba(229,229,229,0.15)', margin: '0 auto 4px' }} />
           </div>
 
           {/* Categories */}
-          <div style={{ marginBottom: '16px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-fog)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+          <div>
+            <Label className="mb-2.5 text-xs tracking-wide text-muted-foreground uppercase">
               Category
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            </Label>
+            <div className="flex flex-wrap gap-2">
               {categories.map(cat => (
-                <button
+                <Chip
                   key={cat.id}
-                  onClick={() => setCategory(cat.name)}
-                  style={{
-                    height: '36px',
-                    padding: '0 14px',
-                    borderRadius: '9999px',
-                    border: category === cat.name ? '1px solid rgba(229,229,229,0.20)' : '1px solid rgba(229,229,229,0.08)',
-                    background: category === cat.name ? 'var(--color-iron)' : 'var(--color-ink)',
-                    color: category === cat.name ? 'var(--color-bone)' : 'var(--color-fog)',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'background 150ms, color 150ms',
-                  }}
+                  pressed={category === cat.name}
+                  onPressedChange={() => setCategory(cat.name)}
                 >
-                  <span style={{ fontSize: '15px' }}>{cat.icon}</span>
-                  {cat.name}
-                </button>
+                  <span>{cat.icon}</span> {cat.name}
+                </Chip>
               ))}
             </div>
           </div>
 
           {/* Description */}
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-fog)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
-              Description
-            </label>
-            <input
+          <div className="space-y-1.5">
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
               type="text"
               placeholder="e.g. Grab, Indomaret…"
               value={description}
               onChange={e => setDescription(e.target.value)}
-              style={inputStyle}
-              onFocus={e => (e.target.style.borderColor = 'rgba(229,229,229,0.30)')}
-              onBlur={e => (e.target.style.borderColor = 'rgba(229,229,229,0.12)')}
+              className="h-12"
             />
           </div>
 
           {/* Date */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-fog)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '6px' }}>
-              Date
-            </label>
-            <input
+          <div className="space-y-1.5">
+            <Label htmlFor="date">Date</Label>
+            <Input
+              id="date"
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              style={{ ...inputStyle, colorScheme: 'dark' }}
-              onFocus={e => (e.target.style.borderColor = 'rgba(229,229,229,0.30)')}
-              onBlur={e => (e.target.style.borderColor = 'rgba(229,229,229,0.12)')}
+              className="h-12"
+              style={{ colorScheme: 'dark' }}
             />
           </div>
 
           {/* Who paid */}
-          <div style={{ marginBottom: '12px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-fog)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
-              Who paid
-            </p>
-            <div style={{ display: 'flex', background: 'var(--color-ink)', borderRadius: '9999px', padding: '4px', gap: '4px' }}>
-              {[
-                { id: user?.id ?? '', label: 'You' },
-                { id: partner?.user_id ?? '', label: partner?.display_name ?? 'Partner' },
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => setPaidBy(opt.id)}
+          <div className="space-y-2">
+            <Label>Who paid</Label>
+            <ToggleGroup
+              type="single"
+              value={paidBy}
+              onValueChange={v => v && setPaidBy(v)}
+              className="w-full rounded-full bg-muted p-1"
+            >
+              {payerOptions.map(opt => (
+                <ToggleGroupItem
+                  key={opt.label}
+                  value={opt.id ?? ''}
                   disabled={!opt.id}
-                  style={{
-                    flex: 1, height: '36px', borderRadius: '9999px',
-                    background: paidBy === opt.id ? 'var(--color-iron)' : 'transparent',
-                    color: paidBy === opt.id ? 'var(--color-bone)' : 'var(--color-fog)',
-                    fontSize: '15px', fontWeight: paidBy === opt.id ? 500 : 400,
-                    cursor: 'pointer', transition: 'background 150ms, color 150ms',
-                  }}
+                  className="flex-1 rounded-full data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
                 >
                   {opt.label}
-                </button>
+                </ToggleGroupItem>
               ))}
-            </div>
+            </ToggleGroup>
           </div>
 
           {/* Split */}
-          <div style={{ marginBottom: '20px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-fog)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
-              Split
-            </p>
-            <div style={{ display: 'flex', background: 'var(--color-ink)', borderRadius: '9999px', padding: '4px', gap: '4px' }}>
-              {([['payer_only', 'Paid alone'], ['even', 'Split evenly']] as const).map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() => setSplit(val)}
-                  style={{
-                    flex: 1, height: '36px', borderRadius: '9999px',
-                    background: split === val ? 'var(--color-iron)' : 'transparent',
-                    color: split === val ? 'var(--color-bone)' : 'var(--color-fog)',
-                    fontSize: '15px', fontWeight: split === val ? 500 : 400,
-                    cursor: 'pointer', transition: 'background 150ms, color 150ms',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          <div className="space-y-2">
+            <Label>Split</Label>
+            <ToggleGroup
+              type="single"
+              value={split}
+              onValueChange={v => v && setSplit(v as 'even' | 'payer_only')}
+              className="w-full rounded-full bg-muted p-1"
+            >
+              <ToggleGroupItem value="payer_only" className="flex-1 rounded-full data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                Paid alone
+              </ToggleGroupItem>
+              <ToggleGroupItem value="even" className="flex-1 rounded-full data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                Split evenly
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
 
           {error && (
-            <p style={{ fontSize: '13px', color: 'var(--color-danger)', marginBottom: '12px' }}>{error}</p>
+            <p className="text-xs text-destructive">{error}</p>
           )}
 
-          {/* Save */}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              display: 'block', width: '100%', height: '48px',
-              borderRadius: '9999px',
-              background: saving ? 'rgba(255,255,255,0.6)' : 'var(--color-paper)',
-              color: 'var(--color-onyx)', fontSize: '16px', fontWeight: 500,
-              cursor: saving ? 'not-allowed' : 'pointer', marginBottom: '10px',
-            }}
-          >
+          <Button onClick={handleSave} disabled={saving} className="w-full">
             {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add expense'}
-          </button>
+          </Button>
 
-          {/* Delete (edit mode only) */}
           {isEdit && (
-            <button
+            <Button
               onClick={handleDelete}
               disabled={deleting}
-              style={{
-                display: 'block', width: '100%', height: '44px',
-                borderRadius: '9999px', background: 'transparent',
-                color: deleting ? 'rgba(248,113,113,0.5)' : 'var(--color-danger)',
-                fontSize: '15px', fontWeight: 500, cursor: deleting ? 'not-allowed' : 'pointer',
-              }}
+              variant="ghost"
+              className="w-full text-destructive hover:text-destructive"
             >
               {deleting ? 'Deleting…' : 'Delete expense'}
-            </button>
+            </Button>
           )}
         </div>
-      </div>
-    </>
+      </SheetContent>
+    </Sheet>
   )
 }

@@ -5,17 +5,7 @@ import { useExpenses } from '../hooks/useExpenses'
 import { useCoupleMembers } from '../hooks/useCoupleMembers'
 import { formatCurrency } from '../lib/format'
 import { categoryColor } from '../lib/categoryColors'
-
-const cardStyle: React.CSSProperties = {
-  background: 'var(--color-char)',
-  border: '1px solid rgba(229,229,229,0.08)',
-  borderRadius: 'var(--radius-card)',
-  padding: '20px',
-}
-
-const cardTitleStyle: React.CSSProperties = {
-  fontSize: '15px', fontWeight: 500, color: 'var(--color-bone)',
-}
+import { Card } from '@/components/ui/card'
 
 function dateKey(d: Date) {
   return d.toISOString().split('T')[0]
@@ -28,13 +18,9 @@ function startOfMonth(d: Date) {
 function TooltipBox({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
   if (!active || !payload?.length) return null
   return (
-    <div style={{
-      background: 'rgba(29,29,29,0.95)', backdropFilter: 'blur(20px)',
-      border: '1px solid rgba(229,229,229,0.10)', borderRadius: '10px',
-      padding: '8px 12px', fontSize: '13px', color: 'var(--color-bone)',
-    }}>
-      <div style={{ color: 'var(--color-fog)', marginBottom: '2px' }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-geist)' }}>{formatCurrency(payload[0].value)}</div>
+    <div className="rounded-lg border border-border bg-popover px-3 py-2 text-sm text-popover-foreground">
+      <div className="mb-0.5 text-muted-foreground">{label}</div>
+      <div className="font-heading">{formatCurrency(payload[0].value)}</div>
     </div>
   )
 }
@@ -98,62 +84,63 @@ export function DashboardPage() {
   const youPct = splitTotal > 0 ? (youTotal / splitTotal) * 100 : 50
 
   return (
-    <div style={{ padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <h1 style={{ fontSize: '28px', fontWeight: 500, color: 'var(--color-bone)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
+    <div className="flex flex-col gap-4 px-5 pt-2 pb-6">
+      <h1 className="font-heading mb-1 text-[28px] font-medium tracking-tight text-foreground">
         Dashboard
       </h1>
 
       {/* Monthly total */}
-      <div style={cardStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <Card className="p-5">
+        <div className="flex items-start justify-between">
           <div>
-            <p style={{ fontSize: '13px', color: 'var(--color-fog)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+            <p className="mb-1.5 text-xs tracking-wide text-muted-foreground uppercase">
               This month
             </p>
-            <p style={{ fontFamily: 'var(--font-geist)', fontSize: '32px', fontWeight: 500, color: 'var(--color-bone)' }}>
+            <p className="font-heading text-3xl font-medium text-foreground">
               {formatCurrency(monthlyTotal)}
             </p>
           </div>
           {momPercent !== null && (
-            <span style={{
-              fontSize: '13px', fontWeight: 500,
-              color: momDelta > 0 ? 'var(--color-danger)' : momDelta < 0 ? 'var(--color-success)' : 'var(--color-fog)',
-              marginTop: '20px',
-            }}>
+            <span
+              className="mt-5 text-xs font-medium"
+              style={{
+                color: momDelta > 0 ? 'var(--color-danger)' : momDelta < 0 ? 'var(--color-success)' : 'var(--muted-foreground)',
+              }}
+            >
               {momDelta > 0 ? '↑' : momDelta < 0 ? '↓' : '–'} {Math.abs(momPercent).toFixed(0)}% vs last month
             </span>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Daily spend, trailing 30 days */}
-      <div style={cardStyle}>
-        <p style={cardTitleStyle}>Daily spend — last 30 days</p>
-        <div style={{ height: '160px', marginTop: '12px', marginLeft: '-12px' }}>
+      <Card className="p-5">
+        <p className="text-sm font-medium text-foreground">Daily spend — last 30 days</p>
+        <div className="mt-3 -ml-3 h-40">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={dailySpend}>
               <XAxis
                 dataKey="label"
                 interval={Math.ceil(dailySpend.length / 6)}
-                tick={{ fill: 'var(--color-fog)', fontSize: 11 }}
-                axisLine={{ stroke: 'rgba(229,229,229,0.10)' }}
+                tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
+                axisLine={{ stroke: 'var(--border)' }}
                 tickLine={false}
               />
-              <Tooltip content={<TooltipBox />} cursor={{ fill: 'rgba(229,229,229,0.06)' }} />
-              <Bar dataKey="total" fill="var(--color-iron)" radius={[3, 3, 0, 0]} />
+              <Tooltip content={<TooltipBox />} cursor={{ fill: 'var(--muted)' }} />
+              <Bar dataKey="total" fill="var(--muted-foreground)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </Card>
 
       {/* Category breakdown */}
-      <div style={cardStyle}>
-        <p style={cardTitleStyle}>By category — this month</p>
+      <Card className="p-5">
+        <p className="text-sm font-medium text-foreground">By category — this month</p>
         {categoryBreakdown.length === 0 ? (
-          <p style={{ fontSize: '14px', color: 'var(--color-fog)', marginTop: '12px' }}>No expenses logged this month yet.</p>
+          <p className="mt-3 text-sm text-muted-foreground">No expenses logged this month yet.</p>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '8px' }}>
-            <div style={{ width: '140px', height: '140px', flexShrink: 0 }}>
+          <div className="mt-2 flex items-center gap-5">
+            <div className="h-[140px] w-[140px] shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={categoryBreakdown} dataKey="value" nameKey="name" innerRadius={42} outerRadius={64} paddingAngle={2} stroke="none">
@@ -163,37 +150,37 @@ export function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="flex flex-1 flex-col gap-2">
               {categoryBreakdown.map(c => (
-                <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: categoryColor(c.name), flexShrink: 0 }} />
-                  <span style={{ color: 'var(--color-mist)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
-                  <span style={{ fontFamily: 'var(--font-geist)', color: 'var(--color-bone)' }}>{formatCurrency(c.value)}</span>
+                <div key={c.name} className="flex items-center gap-2 text-xs">
+                  <span className="size-2 shrink-0 rounded-full" style={{ background: categoryColor(c.name) }} />
+                  <span className="flex-1 truncate text-muted-foreground">{c.name}</span>
+                  <span className="font-heading text-foreground">{formatCurrency(c.value)}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Who paid more */}
-      <div style={cardStyle}>
-        <p style={cardTitleStyle}>Who paid — this month</p>
+      <Card className="p-5">
+        <p className="text-sm font-medium text-foreground">Who paid — this month</p>
         {splitTotal === 0 ? (
-          <p style={{ fontSize: '14px', color: 'var(--color-fog)', marginTop: '12px' }}>No expenses logged this month yet.</p>
+          <p className="mt-3 text-sm text-muted-foreground">No expenses logged this month yet.</p>
         ) : (
-          <div style={{ marginTop: '14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px' }}>
-              <span style={{ color: 'var(--color-bone)', fontWeight: 500 }}>You · {formatCurrency(youTotal)}</span>
-              <span style={{ color: 'var(--color-fog)', fontWeight: 500 }}>{partner?.display_name ?? 'Partner'} · {formatCurrency(partnerTotal)}</span>
+          <div className="mt-3.5">
+            <div className="mb-2 flex justify-between text-xs">
+              <span className="font-medium text-foreground">You · {formatCurrency(youTotal)}</span>
+              <span className="font-medium text-muted-foreground">{partner?.display_name ?? 'Partner'} · {formatCurrency(partnerTotal)}</span>
             </div>
-            <div style={{ height: '8px', borderRadius: '9999px', background: 'var(--color-ink)', overflow: 'hidden', display: 'flex' }}>
-              <div style={{ width: `${youPct}%`, background: 'var(--color-bone)' }} />
-              <div style={{ width: `${100 - youPct}%`, background: 'var(--color-iron)' }} />
+            <div className="flex h-2 overflow-hidden rounded-full bg-muted">
+              <div className="bg-foreground" style={{ width: `${youPct}%` }} />
+              <div className="bg-muted-foreground" style={{ width: `${100 - youPct}%` }} />
             </div>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

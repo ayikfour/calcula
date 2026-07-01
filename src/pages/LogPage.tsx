@@ -1,4 +1,6 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
+import { toast } from 'sonner'
+import { Plus, Receipt, SpinnerGap } from '@phosphor-icons/react'
 import { useAuth } from '../hooks/useAuth'
 import { useExpenses } from '../hooks/useExpenses'
 import { useCategories } from '../hooks/useCategories'
@@ -6,6 +8,9 @@ import { useCoupleMembers } from '../hooks/useCoupleMembers'
 import { AddExpenseSheet } from '../components/AddExpenseSheet'
 import { formatCurrency } from '../lib/format'
 import type { Expense } from '../types'
+import { Button } from '@/components/ui/button'
+import { Chip } from '@/components/ui/chip'
+import { Separator } from '@/components/ui/separator'
 
 const TOAST_COPY = { added: 'Expense added', updated: 'Expense updated', deleted: 'Expense deleted' } as const
 
@@ -27,17 +32,10 @@ export function LogPage() {
   const [filterPaidBy, setFilterPaidBy] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => setToast(null), 2500)
-    return () => clearTimeout(t)
-  }, [toast])
 
   function handleSaved(action: 'added' | 'updated' | 'deleted') {
     refetch()
-    setToast(TOAST_COPY[action])
+    toast(TOAST_COPY[action])
   }
 
   const partner = members.find(m => m.user_id !== user?.id)
@@ -66,95 +64,73 @@ export function LogPage() {
 
   const catIcons = Object.fromEntries(categories.map(c => [c.name, c.icon]))
 
+  const payerOptions = [
+    { label: 'All', value: null as string | null },
+    { label: 'You', value: user?.id ?? null },
+    ...(partner ? [{ label: partner.display_name, value: partner.user_id }] : []),
+  ]
+
   return (
     <>
-      <div style={{ paddingBottom: '8px' }}>
+      <div className="pb-2">
 
         {/* Header */}
-        <div style={{ padding: '8px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 500, color: 'var(--color-bone)', letterSpacing: '-0.02em' }}>
+        <div className="flex items-center justify-between px-5 pt-2 pb-3">
+          <h1 className="font-heading text-[28px] font-medium tracking-tight text-foreground">
             Expenses
           </h1>
-          <span style={{ fontSize: '14px', color: 'var(--color-fog)' }}>
+          <span className="text-sm text-muted-foreground">
             {expenses.length} total
           </span>
         </div>
 
         {/* Filter bar */}
-        <div style={{ overflowX: 'auto', paddingLeft: '16px', paddingRight: '16px', paddingBottom: '12px', display: 'flex', gap: '8px', scrollbarWidth: 'none' }}>
-          {/* Payer filters */}
-          {[
-            { label: 'All', value: null as string | null },
-            { label: 'You', value: user?.id ?? null },
-            ...(partner ? [{ label: partner.display_name, value: partner.user_id }] : []),
-          ].map(opt => (
-            <button
+        <div
+          className="flex gap-2 overflow-x-auto px-4 pb-3 [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {payerOptions.map(opt => (
+            <Chip
               key={opt.label}
-              onClick={() => setFilterPaidBy(opt.value)}
-              style={{
-                flexShrink: 0,
-                height: '32px', padding: '0 14px', borderRadius: '9999px',
-                background: filterPaidBy === opt.value ? 'var(--color-iron)' : 'var(--color-char)',
-                border: filterPaidBy === opt.value ? '1px solid rgba(229,229,229,0.20)' : '1px solid rgba(229,229,229,0.10)',
-                color: filterPaidBy === opt.value ? 'var(--color-bone)' : 'var(--color-fog)',
-                fontSize: '13px', fontWeight: 500, cursor: 'pointer',
-                whiteSpace: 'nowrap', transition: 'background 150ms, color 150ms',
-              }}
+              pressed={filterPaidBy === opt.value}
+              onPressedChange={() => setFilterPaidBy(opt.value)}
             >
               {opt.label}
-            </button>
+            </Chip>
           ))}
 
-          {/* Divider */}
-          <div style={{ width: '1px', background: 'rgba(229,229,229,0.08)', flexShrink: 0, margin: '4px 2px' }} />
+          <Separator orientation="vertical" className="my-1 h-6" />
 
-          {/* Category filters */}
           {categories.map(cat => (
-            <button
+            <Chip
               key={cat.id}
-              onClick={() => setFilterCategory(filterCategory === cat.name ? null : cat.name)}
-              style={{
-                flexShrink: 0,
-                height: '32px', padding: '0 12px', borderRadius: '9999px',
-                background: filterCategory === cat.name ? 'var(--color-iron)' : 'var(--color-char)',
-                border: filterCategory === cat.name ? '1px solid rgba(229,229,229,0.20)' : '1px solid rgba(229,229,229,0.10)',
-                color: filterCategory === cat.name ? 'var(--color-bone)' : 'var(--color-fog)',
-                fontSize: '13px', fontWeight: 500, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: '5px',
-                whiteSpace: 'nowrap', transition: 'background 150ms, color 150ms',
-              }}
+              pressed={filterCategory === cat.name}
+              onPressedChange={() => setFilterCategory(filterCategory === cat.name ? null : cat.name)}
             >
               <span>{cat.icon}</span> {cat.name}
-            </button>
+            </Chip>
           ))}
         </div>
 
         {/* Content */}
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '60px' }}>
-            <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: '2px solid rgba(229,229,229,0.15)', borderTopColor: 'var(--color-bone)', animation: 'spin 0.8s linear infinite' }} />
+          <div className="flex justify-center pt-16">
+            <SpinnerGap className="size-6 animate-spin text-muted-foreground" weight="bold" />
           </div>
         ) : grouped.length === 0 ? (
           /* Empty state */
-          <div style={{ textAlign: 'center', padding: '64px 32px 32px' }}>
-            <div style={{ fontSize: '40px', marginBottom: '16px' }}>🧾</div>
-            <p style={{ fontSize: '18px', fontWeight: 500, color: 'var(--color-bone)', marginBottom: '8px' }}>
+          <div className="px-8 pt-16 pb-8 text-center">
+            <Receipt className="mx-auto mb-4 size-10 text-muted-foreground" weight="light" />
+            <p className="mb-2 text-base font-medium text-foreground">
               {filterCategory || filterPaidBy ? 'No matching expenses' : 'No expenses yet'}
             </p>
-            <p style={{ fontSize: '14px', color: 'var(--color-fog)', marginBottom: '24px', lineHeight: 1.5 }}>
+            <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
               {filterCategory || filterPaidBy ? 'Try a different filter.' : 'Tap + to log your first expense.'}
             </p>
             {!filterCategory && !filterPaidBy && (
-              <button
-                onClick={openAdd}
-                style={{
-                  height: '48px', padding: '0 28px', borderRadius: '9999px',
-                  background: 'var(--color-paper)', color: 'var(--color-onyx)',
-                  fontSize: '16px', fontWeight: 500, cursor: 'pointer',
-                }}
-              >
+              <Button onClick={openAdd} className="px-7">
                 Add expense →
-              </button>
+              </Button>
             )}
           </div>
         ) : (
@@ -163,17 +139,17 @@ export function LogPage() {
             {grouped.map(([date, items]) => (
               <div key={date}>
                 {/* Date header */}
-                <div style={{ padding: '12px 20px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-fog)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div className="flex items-baseline justify-between px-5 pt-3 pb-1.5">
+                  <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                     {formatDateHeader(date)}
                   </span>
-                  <span style={{ fontFamily: 'var(--font-geist)', fontSize: '13px', color: 'var(--color-fog)' }}>
+                  <span className="font-heading text-xs text-muted-foreground">
                     {formatCurrency(items.reduce((s, e) => s + e.amount, 0))}
                   </span>
                 </div>
 
                 {/* Rows */}
-                <div style={{ marginBottom: '4px' }}>
+                <div className="mb-1">
                   {items.map((expense, i) => {
                     const payer = members.find(m => m.user_id === expense.paid_by)
                     const payerLabel = expense.paid_by === user?.id ? 'You' : (payer?.display_name ?? 'Partner')
@@ -183,36 +159,26 @@ export function LogPage() {
                       <button
                         key={expense.id}
                         onClick={() => openEdit(expense)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '12px',
-                          width: '100%', padding: '14px 20px',
-                          background: 'transparent', cursor: 'pointer', textAlign: 'left',
-                          borderTop: i === 0 ? '1px solid rgba(229,229,229,0.06)' : 'none',
-                          borderBottom: '1px solid rgba(229,229,229,0.06)',
-                        }}
+                        className="flex w-full items-center gap-3 border-b border-border px-5 py-3.5 text-left"
+                        style={i === 0 ? { borderTop: '1px solid var(--border)' } : undefined}
                       >
                         {/* Category icon */}
-                        <div style={{
-                          width: '36px', height: '36px', borderRadius: '8px',
-                          background: 'var(--color-ink)', display: 'flex',
-                          alignItems: 'center', justifyContent: 'center',
-                          fontSize: '18px', flexShrink: 0,
-                        }}>
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
                           {catIcons[expense.category] ?? '📦'}
                         </div>
 
                         {/* Text */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: '16px', fontWeight: 500, color: 'var(--color-bone)', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div className="min-w-0 flex-1">
+                          <p className="mb-0.5 truncate text-base font-medium text-foreground">
                             {expense.description || expense.category}
                           </p>
-                          <p style={{ fontSize: '13px', color: 'var(--color-fog)' }}>
+                          <p className="text-xs text-muted-foreground">
                             {payerLabel} · {splitLabel}
                           </p>
                         </div>
 
                         {/* Amount */}
-                        <span style={{ fontFamily: 'var(--font-geist)', fontSize: '16px', fontWeight: 500, color: 'var(--color-bone)', flexShrink: 0 }}>
+                        <span className="font-heading shrink-0 text-base font-medium text-foreground">
                           {formatCurrency(expense.amount)}
                         </span>
                       </button>
@@ -226,45 +192,15 @@ export function LogPage() {
       </div>
 
       {/* FAB */}
-      <button
+      <Button
         onClick={openAdd}
-        style={{
-          position: 'fixed', bottom: 'calc(80px + var(--safe-bottom))', right: '20px', zIndex: 30,
-          width: '56px', height: '56px', borderRadius: '50%',
-          background: 'var(--color-paper)', color: 'var(--color-onyx)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-          cursor: 'pointer',
-          fontSize: '28px', fontWeight: 300, lineHeight: 1,
-        }}
+        size="icon"
+        className="fixed right-5 z-30 size-14 rounded-full shadow-lg"
+        style={{ bottom: 'calc(80px + var(--safe-bottom))' }}
         aria-label="Add expense"
       >
-        +
-      </button>
-
-      {/* Toast */}
-      <div
-        style={{
-          position: 'fixed', bottom: 'calc(80px + var(--safe-bottom))', left: '50%', zIndex: 30,
-          transform: toast ? 'translate(-50%, 0)' : 'translate(-50%, 12px)',
-          opacity: toast ? 1 : 0,
-          pointerEvents: 'none',
-          transition: 'transform 200ms ease, opacity 200ms ease',
-          background: 'rgba(29,29,29,0.90)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(229,229,229,0.10)',
-          borderRadius: '9999px',
-          padding: '12px 20px',
-          fontSize: '14px', fontWeight: 500, color: 'var(--color-bone)',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {toast}
-      </div>
-
-      {/* Spinner keyframes */}
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <Plus className="size-6" weight="bold" />
+      </Button>
 
       <AddExpenseSheet
         isOpen={sheetOpen}

@@ -238,6 +238,17 @@ Centered max-width container at 1200px with a two-column hero (text-left ~40%, m
 
 ## App Patterns (mobile PWA — added as screens are built)
 
+> **Status note (2026-07-01):** Calcula's styling is being migrated onto
+> [shadcn/ui](https://ui.shadcn.com), using a specific preset theme
+> (`ui.shadcn.com/create?preset=brpK&template=vite`) rather than reskinning
+> shadcn to match the dark-glassmorphic identity described below. That
+> preset's own colors, radius, and font tokens are the new source of truth —
+> see **Implemented Theme (Calcula)** and **shadcn Components (Calcula)**
+> further down, which supersede the color/radius/glassmorphism specifics in
+> the patterns below. The *role* each pattern plays (what it's for, where it
+> appears) still holds; only the visual treatment (colors, pill radii, glass
+> blur) is being replaced screen-by-screen as the migration proceeds.
+
 ### Expense List Row
 **Role:** Single item in the shared expense log
 
@@ -314,9 +325,11 @@ Success: `#4ade80` (muted green — readable on dark surfaces without being neon
 Fixed, bottom-centered above the FAB/nav, glass pill (background #1d1d1d 90%, backdrop blur 20px, 1px #e5e5e5 at 10% border), radius 9999px, padding 12px 20px. DM Sans 14px weight 500, color #e5e5e5. Optional leading checkmark in `--color-success`. Slides up + fades in (200ms), auto-dismisses after 2.5s, no manual close control — keep it out of the way of the next action.
 
 ### OTP Code Input
-**Role:** Fallback sign-in on the auth screen — type the 6-digit email code instead of tapping the magic link (needed when the link can't be followed, e.g. sandboxed preview panes)
+**Role:** Fallback sign-in on the auth screen — type the email code instead of tapping the magic link (needed when the link can't be followed, e.g. sandboxed preview panes)
 
-Single text input (not 6 boxes), full-width, height 48px, same chrome as Form Field but centered text. Geist font, 24px weight 500, letter-spacing 0.3em, color #e5e5e5, numeric input mode, maxlength 6. Sits below the "Check your email" copy as a secondary path, separated by a hairline divider with "or enter the 6-digit code" label (13px, #686868, centered). Verify action reuses the Primary Button (White Pill) pattern.
+Built on shadcn's `InputOTP`, two groups of 4 boxes separated by a divider (`InputOTPSeparator`). **8 digits, not 6** — this project's `calcula-dev` Supabase instance issues 8-digit email OTPs (re-check the prod project if this ever changes), and the input previously capped at 6 characters, silently truncating real codes and blocking the whole fallback path. Sits below the "Check your email" copy as a secondary path, separated by a hairline divider with "or enter the code" label. Verify action reuses the primary `Button`.
+
+For local testing where the magic link can't reach the environment (e.g. a preview pane with its own browser context, separate from your inbox), `scripts/dev-otp.mjs` generates a real OTP via the Supabase admin API — no email round-trip needed. See the script's header comment for usage.
 
 ### Chart Card
 **Role:** Container for each Recharts visualization on the Dashboard screen
@@ -345,15 +358,57 @@ Used only for chart fills/legends (donut segments, legend dots) — never for bu
 
 ## Implemented Theme (Calcula)
 
-The exact `@theme` block wired up in `src/index.css` — copy from here, not
-from **Quick Start** below, when working on Calcula. It's a trimmed subset
-of the original tokens (no display/hero type scale, no indigo gradient, no
-dawn-wash — none of those are used in the app) plus the success/danger
-semantic colors, which are missing from the original Quick Start block
-entirely. Two intentional naming differences from the rest of this doc:
-DM Sans is aliased to Tailwind's `--font-sans` slot (not `--font-dm-sans`),
-and radii are singular (`--radius-input`, `--radius-card`) rather than the
-plural names in Quick Start's "Named Radii" table.
+> **Superseded 2026-07-01** — Calcula now runs on shadcn/ui's `brpK` preset
+> (`radix-nova` style, `neutral` base color, `phosphor` icon library, `0`
+> base radius — sharp corners, not the pill/24px system below). The old
+> `--color-void`/`--color-char`/pill-radius/glassmorphism tokens in this
+> section are historical: they describe the pre-shadcn look, kept below only
+> until every screen finishes migrating (some pages still reference `.glass`
+> until their turn in the rewrite). The **live** theme is the shadcn
+> `oklch(...)` variable block actually wired into `src/index.css` — read that
+> file directly for the current values, since shadcn owns and can rewrite
+> this block on future `shadcn add`/`shadcn init` runs. Summary of what
+> changed:
+> - Background/foreground/card/popover/primary/secondary/muted/accent/
+>   destructive/border/input/ring/chart-1..5/sidebar-* — all defined as
+>   `oklch()` values, light set under `:root`, dark overrides under `.dark`.
+>   The `brpK` preset defaults to **light** mode; since Calcula has always
+>   been dark-only (PWA `theme-color`/manifest background is `#0a0a0a`, no
+>   light/dark toggle exists), `<html>` now carries a hardcoded `class="dark"`
+>   in [index.html](index.html) to force the dark variable set everywhere —
+>   revisit only if a light-mode toggle becomes an actual feature request.
+> - `--radius: 0` at the root; component-level radii (`--radius-sm/md/lg/xl`)
+>   are derived from it via `calc()` in the `@theme inline` block
+> - `--font-sans` is now `'Geist Variable'` (via `@fontsource-variable/geist`),
+>   with the old DM Sans value preserved under a new `--font-heading` token
+>   in case a heading ever wants the original typeface back
+> - The original custom color tokens (`--color-void`, `--color-bone`, etc.)
+>   and radii (`--radius-input`/`-card`/`-container`/`-pill`) are left in
+>   place alongside the new shadcn tokens — they don't collide (different
+>   CSS variable names) and `--color-success`/`--color-danger` specifically
+>   are kept as real, still-used semantic tokens for the Balance screen and
+>   form errors, since the `brpK` preset doesn't define its own success color
+> - **The original custom `--spacing-4` … `--spacing-64` block was deleted
+>   outright** (not just left alongside) — Tailwind v4 resolves numeric
+>   utilities like `h-8`/`p-4`/`gap-8` by looking up a literal
+>   `--spacing-<N>` theme key first, so those legacy px-named tokens were
+>   silently hijacking every shadcn component's spacing utilities (e.g. a
+>   `Button`'s `h-8` resolved to `8px` tall instead of the intended `32px`).
+>   Nothing in the codebase referenced `var(--spacing-N)` directly, so
+>   removal was safe; Tailwind's default spacing scale now applies uniformly.
+> - `.glass` (glassmorphism recipe) is being retired — drop it once
+>   [BottomNav.tsx](src/components/BottomNav.tsx),
+>   [SettingsPage.tsx](src/pages/SettingsPage.tsx),
+>   [OnboardingPage.tsx](src/pages/OnboardingPage.tsx), and
+>   [AuthPage.tsx](src/pages/AuthPage.tsx) (its last remaining users) are
+>   rewritten on shadcn components
+> - `.amount` (Geist + tabular-nums for money figures) was unused dead code
+>   pre-migration — every screen applied `font-family: var(--font-geist)`
+>   inline instead. Fold these into shared `Amount`-style formatting as
+>   screens get rewritten, rather than reintroducing the unused utility class.
+
+The section below (the original trimmed `@theme` block) is kept for
+historical reference only — it no longer matches `src/index.css`.
 
 ```css
 @theme {
@@ -416,7 +471,41 @@ plural names in Quick Start's "Named Radii" table.
 Indigo (`--color-indigo`) is defined but **not yet used anywhere in Calcula**
 — every screen so far has only needed the monochrome palette plus success/
 danger. It stays reserved for the same "glow accent only, never a fill"
-role as the original system if a future screen calls for it.
+role as the original system if a future screen calls for it. (Historical —
+predates the shadcn migration; the indigo token is untouched by it.)
+
+---
+
+## shadcn Components (Calcula)
+
+Calcula is built on [shadcn/ui](https://ui.shadcn.com) (`components.json`:
+style `radix-nova`, base color `neutral`, icon library `phosphor`), themed
+via the `brpK` preset rather than a from-scratch reskin. Components live in
+`src/components/ui/` (shadcn-owned — re-run `shadcn add`/`diff` to update
+rather than hand-editing where possible) and `src/components/` (app-owned
+compositions). Mapping from the App Patterns above to what actually backs
+them:
+
+| App Pattern | shadcn primitive |
+|---|---|
+| Primary/Secondary Button | `Button` (`default`/`secondary`/`ghost`/`outline` variants) |
+| FAB | `Button` (`size="icon"`, `rounded-full`), positioned by an app-owned wrapper |
+| Form Field / Input | `Input` + `Label` |
+| OTP Code Input | `InputOTP` |
+| Bottom Sheet (add/edit expense) | `Sheet` (`side="bottom"`) |
+| Category Chip Grid, Filter Chip Bar | `Chip` (`src/components/ui/chip.tsx`) — app-owned, built on Radix `Toggle`; shadcn has no built-in chip |
+| Mode Switcher (Create/Join) | `Tabs`, styled as a segmented control |
+| Toast/Snackbar | `Sonner` (`<Toaster />` mounted once at the app root) |
+| Chart Card (Dashboard) | `Card` wrapping the existing Recharts charts |
+| Invite Code Display | `Input` (readOnly) + icon `Button` (copy), composed manually |
+| Empty State | `Card` + `Button`, composed manually |
+| Bottom Nav | app-owned (no shadcn equivalent); restyled with shadcn tokens + `cn()` |
+| Loading spinner (`ProtectedRoute`) | `Skeleton`, or a Phosphor spinner icon + `animate-spin` |
+
+New color/spacing/component additions going forward still follow the
+project's hard rule: don't introduce one without documenting it here first.
+For shadcn primitives, that means recording *which variant* backs a new
+pattern (not re-deriving raw hex/px values, since shadcn owns those tokens).
 
 ---
 

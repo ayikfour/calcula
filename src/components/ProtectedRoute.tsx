@@ -1,4 +1,5 @@
 import { Navigate } from 'react-router-dom'
+import { SpinnerGap } from '@phosphor-icons/react'
 import { useAuth } from '../hooks/useAuth'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -6,8 +7,8 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-void">
-        <div className="w-6 h-6 rounded-full border-2 border-bone/20 border-t-bone animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <SpinnerGap className="size-6 animate-spin text-muted-foreground" weight="bold" />
       </div>
     )
   }

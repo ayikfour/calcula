@@ -1,7 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { EnvelopeSimple } from '@phosphor-icons/react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from '@/components/ui/input-otp'
 
 type State = 'idle' | 'loading' | 'sent' | 'error'
 
@@ -56,155 +67,107 @@ export function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-void">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
       <div className="w-full max-w-sm space-y-6">
 
         {/* Wordmark */}
-        <div className="text-center space-y-1">
-          <h1 style={{ fontFamily: 'var(--font-geist)', fontSize: '32px', fontWeight: 500, color: 'var(--color-bone)', letterSpacing: '-0.02em' }}>
+        <div className="space-y-1 text-center">
+          <h1 className="font-heading text-3xl font-medium tracking-tight text-foreground">
             Calcula
           </h1>
-          <p style={{ fontSize: '14px', color: 'var(--color-fog)' }}>
+          <p className="text-sm text-muted-foreground">
             Shared expenses for two
           </p>
         </div>
 
         {/* Card */}
-        <div className="glass rounded-card p-6 space-y-4">
+        <div className="space-y-4 rounded-xl bg-card p-6 ring-1 ring-foreground/10">
           {state === 'sent' ? (
-            <div className="text-center space-y-3 py-4">
-              <div className="text-3xl">✉️</div>
-              <p style={{ fontSize: '16px', fontWeight: 500, color: 'var(--color-bone)' }}>
+            <div className="space-y-3 py-4 text-center">
+              <EnvelopeSimple className="mx-auto size-8 text-muted-foreground" weight="light" />
+              <p className="text-base font-medium text-foreground">
                 Check your email
               </p>
-              <p style={{ fontSize: '14px', color: 'var(--color-mist)', lineHeight: 1.5 }}>
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 We sent a magic link to{' '}
-                <span style={{ color: 'var(--color-bone)' }}>{email}</span>.
+                <span className="text-foreground">{email}</span>.
                 Tap it to sign in.
               </p>
               <button
                 onClick={() => setState('idle')}
-                style={{ fontSize: '14px', color: 'var(--color-fog)', marginTop: '8px' }}
+                className="mt-2 text-sm text-muted-foreground hover:text-foreground"
               >
                 Use a different email
               </button>
 
-              {/* Hairline divider */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '8px' }}>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(229,229,229,0.10)' }} />
-                <span style={{ fontSize: '13px', color: 'var(--color-fog)' }}>or enter the 6-digit code</span>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(229,229,229,0.10)' }} />
+              <div className="flex items-center gap-3 pt-2">
+                <Separator className="flex-1" />
+                <span className="text-xs text-muted-foreground">or enter the code</span>
+                <Separator className="flex-1" />
               </div>
 
-              <form onSubmit={handleVerify} className="space-y-3" style={{ textAlign: 'left' }}>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  placeholder="000000"
-                  maxLength={6}
-                  value={code}
-                  onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    height: '48px',
-                    background: 'var(--color-ink)',
-                    border: '1px solid rgba(229,229,229,0.12)',
-                    borderRadius: 'var(--radius-input)',
-                    padding: '12px 16px',
-                    fontFamily: 'var(--font-geist)',
-                    fontSize: '24px',
-                    fontWeight: 500,
-                    letterSpacing: '0.3em',
-                    textAlign: 'center',
-                    color: 'var(--color-bone)',
-                    outline: 'none',
-                  }}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(229,229,229,0.30)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(229,229,229,0.12)')}
-                />
+              <form onSubmit={handleVerify} className="space-y-3 text-left">
+                <div className="flex justify-center">
+                  <InputOTP
+                    maxLength={8}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={code}
+                    onChange={setCode}
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                    </InputOTPGroup>
+                    <InputOTPSeparator />
+                    <InputOTPGroup>
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                      <InputOTPSlot index={6} />
+                      <InputOTPSlot index={7} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
 
                 {verifyError && (
-                  <p style={{ fontSize: '13px', color: 'var(--color-danger)', textAlign: 'center' }}>{verifyError}</p>
+                  <p className="text-center text-xs text-destructive">{verifyError}</p>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={verifying || code.length < 6}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    height: '48px',
-                    borderRadius: 'var(--radius-pill)',
-                    background: verifying || code.length < 6 ? 'rgba(255,255,255,0.6)' : 'var(--color-paper)',
-                    color: 'var(--color-onyx)',
-                    fontSize: '16px',
-                    fontWeight: 500,
-                    cursor: verifying || code.length < 6 ? 'not-allowed' : 'pointer',
-                  }}
-                >
+                <Button type="submit" disabled={verifying || code.length < 8} className="w-full">
                   {verifying ? 'Verifying…' : 'Verify code →'}
-                </button>
+                </Button>
               </form>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-3">
-              <label className="block space-y-1.5">
-                <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-fog)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Email
-                </span>
-                <input
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
                   type="email"
                   autoComplete="email"
                   placeholder="you@example.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    height: '48px',
-                    background: 'var(--color-ink)',
-                    border: '1px solid rgba(229,229,229,0.12)',
-                    borderRadius: 'var(--radius-input)',
-                    padding: '12px 16px',
-                    fontSize: '16px',
-                    color: 'var(--color-bone)',
-                    outline: 'none',
-                  }}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(229,229,229,0.30)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(229,229,229,0.12)')}
+                  className="h-12"
                 />
-              </label>
+              </div>
 
               {error && (
-                <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>{error}</p>
+                <p className="text-xs text-destructive">{error}</p>
               )}
 
-              <button
-                type="submit"
-                disabled={state === 'loading'}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  height: '48px',
-                  borderRadius: 'var(--radius-pill)',
-                  background: state === 'loading' ? 'rgba(255,255,255,0.6)' : 'var(--color-paper)',
-                  color: 'var(--color-onyx)',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                  cursor: state === 'loading' ? 'not-allowed' : 'pointer',
-                  transition: 'opacity 150ms',
-                }}
-              >
+              <Button type="submit" disabled={state === 'loading'} className="w-full">
                 {state === 'loading' ? 'Sending…' : 'Send magic link →'}
-              </button>
+              </Button>
             </form>
           )}
         </div>
 
-        <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--color-fog)' }}>
+        <p className="text-center text-xs text-muted-foreground">
           No password needed — just your email.
         </p>
       </div>

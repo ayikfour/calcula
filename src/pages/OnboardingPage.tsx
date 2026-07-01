@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Check, Copy } from '@phosphor-icons/react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 type Mode = 'create' | 'join'
 type State = 'idle' | 'loading' | 'created' | 'error'
@@ -76,99 +81,48 @@ export function OnboardingPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const inputStyle: React.CSSProperties = {
-    display: 'block',
-    width: '100%',
-    height: '48px',
-    background: 'var(--color-ink)',
-    border: '1px solid rgba(229,229,229,0.12)',
-    borderRadius: 'var(--radius-input)',
-    padding: '12px 16px',
-    fontSize: '16px',
-    color: 'var(--color-bone)',
-    outline: 'none',
-  }
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: '13px',
-    fontWeight: 500,
-    color: 'var(--color-fog)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-    marginBottom: '6px',
-  }
-
   // ── Created state: show invite code ───────────────────────
   if (state === 'created') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-void">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
         <div className="w-full max-w-sm space-y-6">
-          <div className="text-center space-y-1">
-            <h1 style={{ fontFamily: 'var(--font-geist)', fontSize: '32px', fontWeight: 500, color: 'var(--color-bone)', letterSpacing: '-0.02em' }}>
+          <div className="space-y-1 text-center">
+            <h1 className="font-heading text-3xl font-medium tracking-tight text-foreground">
               You're in!
             </h1>
-            <p style={{ fontSize: '14px', color: 'var(--color-fog)' }}>
+            <p className="text-sm text-muted-foreground">
               Share this code with your partner
             </p>
           </div>
 
-          <div className="glass rounded-card p-6 space-y-5">
-            <div
-              style={{
-                background: 'var(--color-ink)',
-                borderRadius: 'var(--radius-input)',
-                padding: '20px',
-                textAlign: 'center',
-                position: 'relative',
-              }}
-            >
-              <p
-                style={{
-                  fontFamily: 'var(--font-geist)',
-                  fontSize: '28px',
-                  fontWeight: 500,
-                  letterSpacing: '0.15em',
-                  color: 'var(--color-bone)',
-                }}
-              >
+          <div className="space-y-5 rounded-xl bg-card p-6 ring-1 ring-foreground/10">
+            <div className="relative rounded-lg bg-muted p-5 text-center">
+              <p className="font-heading text-2xl font-medium tracking-[0.15em] text-foreground">
                 {createdCode}
               </p>
               <button
                 onClick={copyCode}
-                style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '10px',
-                  fontSize: '12px',
-                  color: copied ? 'var(--color-success)' : 'var(--color-fog)',
-                  transition: 'color 150ms',
-                }}
+                className="absolute top-2 right-2.5 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
-                {copied ? 'Copied!' : 'Copy'}
+                {copied ? (
+                  <>
+                    <Check className="size-3.5" weight="bold" /> Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="size-3.5" /> Copy
+                  </>
+                )}
               </button>
             </div>
 
-            <p style={{ fontSize: '14px', color: 'var(--color-mist)', lineHeight: 1.6, textAlign: 'center' }}>
-              Your partner opens the app, taps <strong style={{ color: 'var(--color-bone)' }}>Join a couple</strong>, and enters this code.
+            <p className="text-center text-sm leading-relaxed text-muted-foreground">
+              Your partner opens the app, taps <strong className="text-foreground">Join a couple</strong>, and enters this code.
             </p>
 
-            <button
-              onClick={() => navigate('/log', { replace: true })}
-              style={{
-                display: 'block',
-                width: '100%',
-                height: '48px',
-                borderRadius: 'var(--radius-pill)',
-                background: 'var(--color-paper)',
-                color: 'var(--color-onyx)',
-                fontSize: '16px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
+            <Button onClick={() => navigate('/log', { replace: true })} className="w-full">
               Go to the app →
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -177,109 +131,71 @@ export function OnboardingPage() {
 
   // ── Main onboarding form ───────────────────────────────────
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-void">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
       <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-1">
-          <h1 style={{ fontFamily: 'var(--font-geist)', fontSize: '32px', fontWeight: 500, color: 'var(--color-bone)', letterSpacing: '-0.02em' }}>
+        <div className="space-y-1 text-center">
+          <h1 className="font-heading text-3xl font-medium tracking-tight text-foreground">
             Set up your couple
           </h1>
-          <p style={{ fontSize: '14px', color: 'var(--color-fog)' }}>
+          <p className="text-sm text-muted-foreground">
             Two people, one shared expense log
           </p>
         </div>
 
-        <div className="glass rounded-card p-6 space-y-5">
-          {/* Mode switcher */}
-          <div
-            style={{
-              display: 'flex',
-              background: 'var(--color-ink)',
-              borderRadius: 'var(--radius-pill)',
-              padding: '4px',
-              gap: '4px',
-            }}
+        <div className="space-y-5 rounded-xl bg-card p-6 ring-1 ring-foreground/10">
+          <Tabs
+            value={mode}
+            onValueChange={v => { setMode(v as Mode); setError('') }}
           >
-            {(['create', 'join'] as Mode[]).map(m => (
-              <button
-                key={m}
-                onClick={() => { setMode(m); setError('') }}
-                style={{
-                  flex: 1,
-                  height: '36px',
-                  borderRadius: 'var(--radius-pill)',
-                  background: mode === m ? 'var(--color-iron)' : 'transparent',
-                  color: mode === m ? 'var(--color-bone)' : 'var(--color-fog)',
-                  fontSize: '15px',
-                  fontWeight: mode === m ? 500 : 400,
-                  transition: 'background 150ms, color 150ms',
-                  cursor: 'pointer',
-                }}
-              >
-                {m === 'create' ? 'Create' : 'Join'}
-              </button>
-            ))}
-          </div>
+            <TabsList className="w-full">
+              <TabsTrigger value="create">Create</TabsTrigger>
+              <TabsTrigger value="join">Join</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
           {/* Form */}
           <form onSubmit={mode === 'create' ? handleCreate : handleJoin} className="space-y-4">
             {mode === 'join' && (
-              <label className="block">
-                <span style={labelStyle}>Invite code</span>
-                <input
+              <div className="space-y-1.5">
+                <Label htmlFor="inviteCode">Invite code</Label>
+                <Input
+                  id="inviteCode"
                   type="text"
                   placeholder="ABC123"
                   value={inviteCode}
                   onChange={e => setInviteCode(e.target.value.toUpperCase())}
                   maxLength={6}
                   required
-                  style={{ ...inputStyle, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-geist)' }}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(229,229,229,0.30)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(229,229,229,0.12)')}
+                  className="h-12 font-heading tracking-[0.1em] uppercase"
                 />
-              </label>
+              </div>
             )}
 
-            <label className="block">
-              <span style={labelStyle}>Your name</span>
-              <input
+            <div className="space-y-1.5">
+              <Label htmlFor="displayName">Your name</Label>
+              <Input
+                id="displayName"
                 type="text"
                 placeholder="How your partner sees you"
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
                 maxLength={32}
                 required
-                style={inputStyle}
-                onFocus={e => (e.target.style.borderColor = 'rgba(229,229,229,0.30)')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(229,229,229,0.12)')}
+                className="h-12"
               />
-            </label>
+            </div>
 
             {error && (
-              <p style={{ fontSize: '13px', color: 'var(--color-danger)', lineHeight: 1.5 }}>{error}</p>
+              <p className="text-xs leading-relaxed text-destructive">{error}</p>
             )}
 
-            <button
-              type="submit"
-              disabled={state === 'loading'}
-              style={{
-                display: 'block',
-                width: '100%',
-                height: '48px',
-                borderRadius: 'var(--radius-pill)',
-                background: state === 'loading' ? 'rgba(255,255,255,0.6)' : 'var(--color-paper)',
-                color: 'var(--color-onyx)',
-                fontSize: '16px',
-                fontWeight: 500,
-                cursor: state === 'loading' ? 'not-allowed' : 'pointer',
-                transition: 'opacity 150ms',
-              }}
-            >
+            <Button type="submit" disabled={state === 'loading'} className="w-full">
               {state === 'loading'
                 ? 'Working…'
                 : mode === 'create'
                 ? 'Create couple →'
                 : 'Join couple →'}
-            </button>
+            </Button>
           </form>
         </div>
       </div>
