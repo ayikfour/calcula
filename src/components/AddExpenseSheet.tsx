@@ -62,7 +62,6 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
   const [description, setDescription] = useState('')
   const [date, setDate] = useState('')
   const [paidBy, setPaidBy] = useState(user?.id ?? '')
-  const [split, setSplit] = useState<'even' | 'payer_only'>('payer_only')
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -77,14 +76,12 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
       setDescription(expense.description)
       setDate(expense.expense_date)
       setPaidBy(expense.paid_by)
-      setSplit(expense.split)
     } else {
       setAmount('')
       setCategory(categories[0]?.name ?? '')
       setDescription('')
       setDate(new Date().toISOString().split('T')[0])
       setPaidBy(user?.id ?? '')
-      setSplit('payer_only')
     }
     setCategoryPickerOpen(false)
     setDatePickerOpen(false)
@@ -107,7 +104,6 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
       category,
       description: description.trim(),
       expense_date: date,
-      split,
     }
 
     const { error: err } = isEdit

@@ -1,16 +1,27 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Plus, Receipt, SpinnerGap } from '@phosphor-icons/react'
+import { Plus, Receipt, SpinnerGap, CaretUpDown } from '@phosphor-icons/react'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useExpenses } from '../hooks/useExpenses'
 import { useCategories } from '../hooks/useCategories'
 import { useCoupleMembers } from '../hooks/useCoupleMembers'
 import { AddExpenseSheet } from '../components/AddExpenseSheet'
+import { FilterDrawer } from '../components/FilterDrawer'
+import { MonthDropdown } from '../components/MonthDropdown'
+import { ExpenseRow } from '../components/ExpenseRow'
 import { formatCurrency, formatDateLabel } from '../lib/format'
 import type { Expense } from '../types'
 import { Button } from '@/components/ui/button'
-import { Chip } from '@/components/ui/chip'
-import { Separator } from '@/components/ui/separator'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog'
 
 const TOAST_COPY = { added: 'Expense added', updated: 'Expense updated', deleted: 'Expense deleted' } as const
 
@@ -22,22 +33,37 @@ export function LogPage() {
 
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
   const [filterPaidBy, setFilterPaidBy] = useState<string | null>(null)
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+  const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [openSwipeRowId, setOpenSwipeRowId] = useState<string | null>(null)
 
   function handleSaved(action: 'added' | 'updated' | 'deleted') {
     refetch()
     toast(TOAST_COPY[action])
   }
 
-  const partner = members.find(m => m.user_id !== user?.id)
+  const availableMonths = useMemo(() => {
+    const set = new Set(expenses.map(e => e.expense_date.slice(0, 7)))
+    return Array.from(set).sort((a, b) => b.localeCompare(a))
+  }, [expenses])
+
+  useEffect(() => {
+    if (selectedMonth === null && availableMonths.length > 0) {
+      setSelectedMonth(availableMonths[0])
+    }
+  }, [availableMonths, selectedMonth])
 
   const filtered = useMemo(() => {
     let result = expenses
+    if (selectedMonth) result = result.filter(e => e.expense_date.slice(0, 7) === selectedMonth)
     if (filterCategory) result = result.filter(e => e.category === filterCategory)
     if (filterPaidBy) result = result.filter(e => e.paid_by === filterPaidBy)
     return result
-  }, [expenses, filterCategory, filterPaidBy])
+  }, [expenses, selectedMonth, filterCategory, filterPaidBy])
 
   // Group by date
   const grouped = useMemo(() => {
@@ -50,60 +76,25 @@ export function LogPage() {
     return Array.from(map.entries()).sort(([a], [b]) => b.localeCompare(a))
   }, [filtered])
 
-  function openAdd() { setEditingExpense(null); setSheetOpen(true) }
+  function openAdd() { setEditingExpense(null); setSheetOpen(true); setOpenSwipeRowId(null) }
   function openEdit(e: Expense) { setEditingExpense(e); setSheetOpen(true) }
   function closeSheet() { setSheetOpen(false); setEditingExpense(null) }
 
-  const catIcons = Object.fromEntries(categories.map(c => [c.name, c.icon]))
+  async function handleConfirmDelete() {
+    if (!deletingExpense) return
+    setDeleting(true)
+    await supabase.from('expenses').delete().eq('id', deletingExpense.id)
+    setDeleting(false)
+    setDeletingExpense(null)
+    handleSaved('deleted')
+  }
 
-  const payerOptions = [
-    { label: 'All', value: null as string | null },
-    { label: 'You', value: user?.id ?? null },
-    ...(partner ? [{ label: partner.display_name, value: partner.user_id }] : []),
-  ]
+  const catIcons = Object.fromEntries(categories.map(c => [c.name, c.icon]))
+  const hasActiveFilters = !!(filterCategory || filterPaidBy)
 
   return (
     <>
-      <div className="pb-2">
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-2 pb-3">
-          <h1 className="font-heading text-[28px] font-medium tracking-tight text-foreground">
-            Expenses
-          </h1>
-          <span className="text-sm text-muted-foreground">
-            {expenses.length} total
-          </span>
-        </div>
-
-        {/* Filter bar */}
-        <div
-          className="flex gap-2 overflow-x-auto px-4 pb-3 [&::-webkit-scrollbar]:hidden"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          {payerOptions.map(opt => (
-            <Chip
-              key={opt.label}
-              pressed={filterPaidBy === opt.value}
-              onPressedChange={() => setFilterPaidBy(opt.value)}
-            >
-              {opt.label}
-            </Chip>
-          ))}
-
-          <Separator orientation="vertical" className="my-1 h-6" />
-
-          {categories.map(cat => (
-            <Chip
-              key={cat.id}
-              pressed={filterCategory === cat.name}
-              onPressedChange={() => setFilterCategory(filterCategory === cat.name ? null : cat.name)}
-            >
-              <span>{cat.icon}</span> {cat.name}
-            </Chip>
-          ))}
-        </div>
-
+      <div className="pb-24">
         {/* Content */}
         {loading ? (
           <div className="flex justify-center pt-16">
@@ -114,12 +105,12 @@ export function LogPage() {
           <div className="px-8 pt-16 pb-8 text-center">
             <Receipt className="mx-auto mb-4 size-10 text-muted-foreground" weight="light" />
             <p className="mb-2 text-base font-medium text-foreground">
-              {filterCategory || filterPaidBy ? 'No matching expenses' : 'No expenses yet'}
+              {hasActiveFilters ? 'No matching expenses' : 'No expenses yet'}
             </p>
             <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
-              {filterCategory || filterPaidBy ? 'Try a different filter.' : 'Tap + to log your first expense.'}
+              {hasActiveFilters ? 'Try a different filter.' : 'Tap + to log your first expense.'}
             </p>
-            {!filterCategory && !filterPaidBy && (
+            {!hasActiveFilters && (
               <Button onClick={openAdd} className="px-7">
                 Add expense →
               </Button>
@@ -127,7 +118,7 @@ export function LogPage() {
           </div>
         ) : (
           /* Expense list grouped by date */
-          <div>
+          <div className="pt-2">
             {grouped.map(([date, items]) => (
               <div key={date}>
                 {/* Date header */}
@@ -145,35 +136,19 @@ export function LogPage() {
                   {items.map((expense, i) => {
                     const payer = members.find(m => m.user_id === expense.paid_by)
                     const payerLabel = expense.paid_by === user?.id ? 'You' : (payer?.display_name ?? 'Partner')
-                    const splitLabel = expense.split === 'even' ? 'Split' : 'Solo'
 
                     return (
-                      <button
+                      <ExpenseRow
                         key={expense.id}
-                        onClick={() => openEdit(expense)}
-                        className="flex w-full items-center gap-3 border-b border-border px-5 py-3.5 text-left"
-                        style={i === 0 ? { borderTop: '1px solid var(--border)' } : undefined}
-                      >
-                        {/* Category icon */}
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
-                          {catIcons[expense.category] ?? '📦'}
-                        </div>
-
-                        {/* Text */}
-                        <div className="min-w-0 flex-1">
-                          <p className="mb-0.5 truncate text-base font-medium text-foreground">
-                            {expense.description || expense.category}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {payerLabel} · {splitLabel}
-                          </p>
-                        </div>
-
-                        {/* Amount */}
-                        <span className="font-heading shrink-0 text-base font-medium text-foreground">
-                          {formatCurrency(expense.amount)}
-                        </span>
-                      </button>
+                        expense={expense}
+                        categoryIcon={catIcons[expense.category] ?? '📦'}
+                        payerLabel={payerLabel}
+                        isOpen={openSwipeRowId === expense.id}
+                        onOpenChange={open => setOpenSwipeRowId(open ? expense.id : null)}
+                        onEdit={() => openEdit(expense)}
+                        onDeleteRequest={() => { setDeletingExpense(expense); setOpenSwipeRowId(null) }}
+                        showTopBorder={i === 0}
+                      />
                     )
                   })}
                 </div>
@@ -183,16 +158,34 @@ export function LogPage() {
         )}
       </div>
 
-      {/* FAB */}
-      <Button
-        onClick={openAdd}
-        size="icon"
-        className="fixed right-5 z-30 size-14 rounded-full shadow-lg"
-        style={{ bottom: 'calc(80px + var(--safe-bottom))' }}
-        aria-label="Add expense"
+      {/* Bottom toolbar: add + filter + month */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between px-5 pt-3"
+        style={{ paddingBottom: 'calc(16px + var(--safe-bottom))' }}
       >
-        <Plus className="size-6" weight="bold" />
-      </Button>
+        <Button onClick={openAdd} size="icon" aria-label="Add expense">
+          <Plus className="size-4" weight="bold" />
+        </Button>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => { setFilterDrawerOpen(true); setOpenSwipeRowId(null) }}
+            className="gap-1.5"
+          >
+            Filter
+            <CaretUpDown className="size-3.5" />
+            {hasActiveFilters && <span className="size-1.5 rounded-full bg-foreground" />}
+          </Button>
+          {availableMonths.length > 0 && selectedMonth && (
+            <MonthDropdown
+              months={availableMonths}
+              selectedMonth={selectedMonth}
+              onSelect={m => { setSelectedMonth(m); setOpenSwipeRowId(null) }}
+            />
+          )}
+        </div>
+      </div>
 
       <AddExpenseSheet
         isOpen={sheetOpen}
@@ -202,6 +195,42 @@ export function LogPage() {
         categories={categories}
         members={members}
       />
+
+      <FilterDrawer
+        isOpen={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        categories={categories}
+        members={members}
+        currentUserId={user?.id}
+        selectedCategory={filterCategory}
+        selectedPayer={filterPaidBy}
+        onApply={(category, payer) => { setFilterCategory(category); setFilterPaidBy(payer) }}
+      />
+
+      <Dialog open={!!deletingExpense} onOpenChange={open => !open && setDeletingExpense(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this expense?</DialogTitle>
+            <DialogDescription>
+              {deletingExpense && (
+                <>
+                  {deletingExpense.description || deletingExpense.category} · {formatCurrency(deletingExpense.amount)}
+                  <br />
+                  This can't be undone, and removes it from your partner's log too.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="secondary">Cancel</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

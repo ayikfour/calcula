@@ -7,7 +7,6 @@ export interface Expense {
   category: string
   description: string
   expense_date: string
-  split: 'even' | 'payer_only'
   created_at: string
 }
 

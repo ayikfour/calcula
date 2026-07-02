@@ -252,17 +252,19 @@ Centered max-width container at 1200px with a two-column hero (text-left ~40%, m
 ### Expense List Row
 **Role:** Single item in the shared expense log
 
-Full-width tappable row, 64px min-height, horizontal padding 20px, vertical padding 14px. Three-column layout: icon well (36px circle, #282828 fill, 8px radius, emoji centered at 18px) | text stack (description in #e5e5e5 16px weight 500; meta line in #686868 14px: "You · Split" or "Partner · Solo") | amount (#e5e5e5 Geist 16px weight 500, tabular-nums, right-aligned). Rows separated by 1px #e5e5e5 hairlines at 6% opacity. Tap opens the edit sheet.
+Full-width tappable row, 64px min-height, horizontal padding 20px, vertical padding 14px. Layout: icon well (36px circle, #282828 fill, 8px radius, emoji centered at 18px) | text stack (category name in #e5e5e5 16px weight 500 on line one; meta line in #686868 14px on line two: description + " · " + payer ("You" or partner's display name), or just the payer if no description) | amount (#e5e5e5 Geist 16px weight 500, tabular-nums, right-aligned). Rows separated by 1px #e5e5e5 hairlines at 6% opacity. Tapping anywhere on the row opens the edit sheet.
+
+**Swipe-to-delete (`ExpenseRow.tsx`):** no persistent delete affordance on the row — swiping left reveals a fixed-width (76px) destructive panel (`bg-destructive/15`, `TrashSimple` icon) positioned underneath via `absolute inset-y-0 right-0`, with the row's own content sliding left via `transform: translateX()` to expose it. Implemented with the same manual pointer-event pattern as the bottom sheet's drag-to-dismiss (see below): `onPointerDown`/`onPointerMove`/`onPointerUp`, committing to a horizontal drag only once movement exceeds an 8px threshold *and* is more horizontal than vertical (so vertical list scrolling is never hijacked). Releasing past 50% of the reveal width snaps open; short of that, snaps closed. A tap with no committed drag either opens the edit sheet (row closed) or closes the row (row already open) — it never does both. Only one row can be swiped open at a time, tracked by `LogPage` (`openSwipeRowId`), so opening another row, the Filter drawer, the month dropdown, or the Add sheet all close whichever row is open first. Tapping the revealed delete button still opens the shared confirmation `Dialog` (page-level, not one per row) before calling delete — never a silent swipe-and-delete, since this is a shared couple's log.
 
 ### Amount Display
 **Role:** Numeric money values throughout the app
 
-Always Geist font, `font-variant-numeric: tabular-nums`, weight 500. Large hero amounts (balance screen): 40px. List row amounts: 16px. Form input amounts: 32px centered. No currency symbol in the UI for now — single currency assumed per PRD. Positive balance: `--color-success` (#4ade80). Negative balance: `--color-danger` (#f87171). Neutral expense amounts: `--color-bone` (#e5e5e5).
+Always Geist font, `font-variant-numeric: tabular-nums`, weight 500. List row amounts: 16px. Form input amounts: 32px centered. No currency symbol in the UI for now — single currency assumed per PRD. Neutral expense amounts: `--color-bone` (#e5e5e5).
 
-### FAB (Floating Action Button)
-**Role:** Primary add action on the Log screen
+### Bottom Toolbar (Log screen)
+**Role:** Add action + list filtering, fixed to the bottom of the Log screen
 
-56px circle, background #ffffff, icon #000000 (24px + glyph). Fixed bottom-right, 20px from edge, sits 16px above the bottom nav. Shadow: `0 4px 16px rgba(0,0,0,0.4)`. No label — icon alone is sufficient in context. Single tap opens the Add Expense sheet.
+Fixed full-width row at the viewport bottom, `justify-between`, 20px horizontal padding, respecting `env(safe-area-inset-bottom)`. Left: the Add button (`size="icon"`, shadcn `Button` default — **square, not pill**, since the implemented theme's `--radius: 0` makes the default `rounded-lg` render as sharp corners; this is the current square button style, superseding the old pill-shaped FAB). Right: "Filter" button (secondary `Button`, trailing `CaretUpDown` icon, small dot indicator when a filter is active) and the Month Dropdown, grouped with an 8px gap. No background/blur behind the row — the three buttons float directly over the scrolling list, which carries `pb-24` so the last row always clears them.
 
 ### Bottom Sheet
 **Role:** Add/edit expense form, slides up from bottom
@@ -322,10 +324,10 @@ full-width labeled sections. Row one: a date pill that opens a calendar
 picker (see below) plus a "who paid" `Chip` that toggles between the two
 possible payers on tap. Row two: a category `Chip` (icon + name + trailing
 `CaretRight`) that opens the category picker, next to the full-width Save
-`Button`. The old "Split" toggle was removed from the UI entirely — new
-expenses default to `payer_only`, and editing an expense that was previously
-split evenly leaves its stored `split` value untouched (no control exists to
-change it, so it's never overwritten).
+`Button`. The "Split" feature (the old evenly-split-expense toggle, its
+`expenses.split` column, and the Balance screen that read it) has been
+removed entirely — not just hidden from the UI. There is no split state to
+track in this form anymore.
 
 **Date picker:** the date pill opens a `Popover` + `Calendar` (shadcn
 primitives, added via `shadcn add popover calendar` — pulls in `react-day-picker`
@@ -364,10 +366,15 @@ instance, not inline in the form)
 
 2-row scrollable horizontal strip of category pills. Each pill: 9999px radius, height 36px, padding 8px 14px, gap 8px. Inactive: background #282828, text #686868. Active/selected: background #3d3d3d, text #e5e5e5, 1px #e5e5e5 at 20% border. Emoji icon at 16px + name at 13px weight 500. Never truncate.
 
-### Filter Chip Bar
-**Role:** Category and payer filter on the Log screen
+### Filter Drawer
+**Role:** Category and payer filter on the Log screen, opened from a "Filter" button in the toolbar row
 
-Horizontal scrollable row (no scrollbar), 8px gap, 16px horizontal padding, 12px vertical. Each chip: 9999px radius, height 32px, padding 6px 14px, DM Sans 13px weight 500. Inactive: background #1d1d1d, border 1px #e5e5e5 at 10%, text #686868. Active: background #3d3d3d, border 1px #e5e5e5 at 20%, text #e5e5e5.
+Bottom `Sheet` (same primitive/pattern as the Add/Edit Expense sheet and the Category Chip Grid below — a sibling `Sheet` instance, not nested inline). Contains a "Paid by" `Chip` group and a "Category" `Chip` grid, each under a small uppercase label. Selections are staged locally and only committed on tap; a two-button footer (`SheetFooter`, row layout) holds "Reset" (secondary `Button`, clears both filters and closes) and "Filter" (primary `Button`, applies the staged selections and closes). The "Filter" toolbar button shows a small dot indicator when any filter is active.
+
+### Month Dropdown
+**Role:** Filter the Log screen to a single month, shown next to the Filter button
+
+Built on shadcn's `Select` (`select.tsx`), left at its default trigger styling — **square** (`rounded-lg`, which the implemented theme's `--radius: 0` renders as sharp corners), matching the Add and Filter buttons beside it in the bottom toolbar rather than the old pill language. Options are generated dynamically from the distinct months present in the couple's `expense_date` values (not a static calendar list) — sorted most-recent-first, defaulting to the most recent month with data. Label shows just the month name ("October"), or "Month Year" if the couple's history spans more than one calendar year.
 
 ### Empty State
 **Role:** Log screen when no expenses exist yet
@@ -399,13 +406,13 @@ Pill container, radius 9999px, background #1d1d1d, padding 4px. Two equal segmen
 
 Monospace code block: background #282828 (`--color-ink`), radius 10px, padding 16px 20px. Code text: Geist font, 24px weight 500, letter-spacing 0.1em, color #e5e5e5. Centered. Accompanied by a copy-to-clipboard icon button (32px, icon-only, ghost).
 
-### Mobile Bottom Nav (App Shell)
-**Role:** Primary navigation across 4 app screens
+### Mobile Top Nav (App Shell)
+**Role:** Primary navigation across the app's 3 screens (Logs, Stats, Settings)
 
-Full-width fixed bar at bottom. Glass treatment (background #1d1d1d 80%, backdrop-filter blur 20px, 1px #e5e5e5 at 8% opacity border-top). 4 equal tabs: icon (20px stroke) + label (11px weight 500, letter-spacing 0.025em). Active tab: #e5e5e5. Inactive: #686868, hover: #c2c2c2. Padding respects `env(safe-area-inset-bottom)`.
+Full-width fixed bar at top, replacing the earlier bottom nav now that the Balance screen (and its 4th tab) has been removed. Plain text-button tabs — no icons — in `font-heading` 18px weight 500, `gap-5` between tabs, `px-5` horizontal padding. Active tab: `--foreground`. Inactive: `--muted-foreground`, hover `--foreground`. 1px `--border` bottom hairline. Padding respects `env(safe-area-inset-top)` instead of the bottom inset.
 
 ### Success/Danger Semantic Tones
-**Role:** Balance screen positive/negative values, form error states
+**Role:** Form error states, Dashboard/Stats month-over-month delta indicator
 
 Success: `#4ade80` (muted green — readable on dark surfaces without being neon). Danger: `#f87171` (muted red). Outside the indigo accent, these are the only chromatic colors used in UI chrome (buttons, backgrounds, borders) — the one further exception is the Category Color Palette below, scoped strictly to chart data.
 
@@ -476,8 +483,9 @@ Used only for chart fills/legends (donut segments, legend dots) — never for bu
 >   and radii (`--radius-input`/`-card`/`-container`/`-pill`) are left in
 >   place alongside the new shadcn tokens — they don't collide (different
 >   CSS variable names) and `--color-success`/`--color-danger` specifically
->   are kept as real, still-used semantic tokens for the Balance screen and
->   form errors, since the `brpK` preset doesn't define its own success color
+>   are kept as real, still-used semantic tokens for form errors and the
+>   Stats screen's month-over-month delta, since the `brpK` preset doesn't
+>   define its own success color
 > - **The original custom `--spacing-4` … `--spacing-64` block was deleted
 >   outright** (not just left alongside) — Tailwind v4 resolves numeric
 >   utilities like `h-8`/`p-4`/`gap-8` by looking up a literal
@@ -487,7 +495,7 @@ Used only for chart fills/legends (donut segments, legend dots) — never for bu
 >   Nothing in the codebase referenced `var(--spacing-N)` directly, so
 >   removal was safe; Tailwind's default spacing scale now applies uniformly.
 > - `.glass` (glassmorphism recipe) is being retired — drop it once
->   [BottomNav.tsx](src/components/BottomNav.tsx),
+>   [TopNav.tsx](src/components/TopNav.tsx),
 >   [SettingsPage.tsx](src/pages/SettingsPage.tsx),
 >   [OnboardingPage.tsx](src/pages/OnboardingPage.tsx), and
 >   [AuthPage.tsx](src/pages/AuthPage.tsx) (its last remaining users) are
@@ -579,17 +587,19 @@ them:
 | App Pattern | shadcn primitive |
 |---|---|
 | Primary/Secondary Button | `Button` (`default`/`secondary`/`ghost`/`outline` variants) |
-| FAB | `Button` (`size="icon"`, `rounded-full`), positioned by an app-owned wrapper |
+| Bottom Toolbar (Add/Filter/Month) | `Button` (`size="icon"`/`secondary`, default square radius) + `Select`, positioned by an app-owned fixed wrapper |
 | Form Field / Input | `Input` + `Label` |
 | OTP Code Input | `InputOTP` |
 | Bottom Sheet (add/edit expense) | `Sheet` (`side="bottom"`) |
-| Category Chip Grid, Filter Chip Bar | `Chip` (`src/components/ui/chip.tsx`) — app-owned, built on Radix `Toggle`; shadcn has no built-in chip |
+| Category Chip Grid, Filter Drawer | `Chip` (`src/components/ui/chip.tsx`) — app-owned, built on Radix `Toggle`; shadcn has no built-in chip |
+| Month Dropdown | `Select` |
+| Delete confirmation (expense row) | `Dialog` |
 | Mode Switcher (Create/Join) | `Tabs`, styled as a segmented control |
 | Toast/Snackbar | `Sonner` (`<Toaster />` mounted once at the app root) |
 | Chart Card (Dashboard) | `Card` wrapping the existing Recharts charts |
 | Invite Code Display | `Input` (readOnly) + icon `Button` (copy), composed manually |
 | Empty State | `Card` + `Button`, composed manually |
-| Bottom Nav | app-owned (no shadcn equivalent); restyled with shadcn tokens + `cn()` |
+| Top Nav | app-owned (no shadcn equivalent); restyled with shadcn tokens + `cn()` |
 | Loading spinner (`ProtectedRoute`) | `Skeleton`, or a Phosphor spinner icon + `animate-spin` |
 
 New color/spacing/component additions going forward still follow the
