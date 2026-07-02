@@ -163,19 +163,18 @@ export function LogPage() {
         className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between px-5 pt-3"
         style={{ paddingBottom: 'calc(16px + var(--safe-bottom))' }}
       >
-        <Button onClick={openAdd} size="icon" aria-label="Add expense">
-          <Plus className="size-4" weight="bold" />
+        <Button onClick={openAdd} size="icon" className="size-12" aria-label="Add expense">
+          <Plus className="size-5" weight="bold" />
         </Button>
 
         <div className="flex items-center gap-2">
           <Button
-            variant="secondary"
             onClick={() => { setFilterDrawerOpen(true); setOpenSwipeRowId(null) }}
             className="gap-1.5"
           >
             Filter
             <CaretUpDown className="size-3.5" />
-            {hasActiveFilters && <span className="size-1.5 rounded-full bg-foreground" />}
+            {hasActiveFilters && <span className="size-1.5 rounded-full bg-primary-foreground" />}
           </Button>
           {availableMonths.length > 0 && selectedMonth && (
             <MonthDropdown

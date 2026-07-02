@@ -10,7 +10,7 @@ const tabs = [
 export function TopNav() {
   return (
     <nav
-      className="fixed top-0 right-0 left-0 z-50 border-b border-border bg-card"
+      className="fixed top-0 right-0 left-0 z-50"
       style={{ paddingTop: 'var(--safe-top)' }}
     >
       <div className="mx-auto flex max-w-lg items-center gap-5 px-5 py-3.5">

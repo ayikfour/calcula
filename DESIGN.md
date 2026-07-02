@@ -264,7 +264,7 @@ Always Geist font, `font-variant-numeric: tabular-nums`, weight 500. List row am
 ### Bottom Toolbar (Log screen)
 **Role:** Add action + list filtering, fixed to the bottom of the Log screen
 
-Fixed full-width row at the viewport bottom, `justify-between`, 20px horizontal padding, respecting `env(safe-area-inset-bottom)`. Left: the Add button (`size="icon"`, shadcn `Button` default — **square, not pill**, since the implemented theme's `--radius: 0` makes the default `rounded-lg` render as sharp corners; this is the current square button style, superseding the old pill-shaped FAB). Right: "Filter" button (secondary `Button`, trailing `CaretUpDown` icon, small dot indicator when a filter is active) and the Month Dropdown, grouped with an 8px gap. No background/blur behind the row — the three buttons float directly over the scrolling list, which carries `pb-24` so the last row always clears them.
+Fixed full-width row at the viewport bottom, `justify-between`, 20px horizontal padding, respecting `env(safe-area-inset-bottom)`. Left: the Add button, `size="icon"` shadcn `Button` sized up to 48×48 (`size-12`) for a larger primary tap target than the toolbar's secondary controls — **square, not pill**, since the implemented theme's `--radius: 0` makes the default `rounded-lg` render as sharp corners; this is the current square button style, superseding the old pill-shaped FAB. Right: "Filter" button (default `Button` variant, trailing `CaretUpDown` icon, small `--primary-foreground` dot indicator when a filter is active) and the Month Dropdown, grouped with an 8px gap — both styled with the same `bg-primary`/`text-primary-foreground` treatment as the Add button (white-on-dark) rather than the muted `secondary` variant, so all three toolbar controls read as one consistent action group. No background/blur behind the row — the three buttons float directly over the scrolling list, which carries `pb-24` so the last row always clears them.
 
 ### Bottom Sheet
 **Role:** Add/edit expense form, slides up from bottom
@@ -409,7 +409,7 @@ Monospace code block: background #282828 (`--color-ink`), radius 10px, padding 1
 ### Mobile Top Nav (App Shell)
 **Role:** Primary navigation across the app's 3 screens (Logs, Stats, Settings)
 
-Full-width fixed bar at top, replacing the earlier bottom nav now that the Balance screen (and its 4th tab) has been removed. Plain text-button tabs — no icons — in `font-heading` 18px weight 500, `gap-5` between tabs, `px-5` horizontal padding. Active tab: `--foreground`. Inactive: `--muted-foreground`, hover `--foreground`. 1px `--border` bottom hairline. Padding respects `env(safe-area-inset-top)` instead of the bottom inset.
+Full-width fixed bar at top, replacing the earlier bottom nav now that the Balance screen (and its 4th tab) has been removed. Plain text-button tabs — no icons — in `font-heading` 18px weight 500, `gap-5` between tabs, `px-5` horizontal padding. Active tab: `--foreground`. Inactive: `--muted-foreground`, hover `--foreground`. No background fill or border — the bar is fully transparent and floats directly over whatever scrolls beneath it, keeping the page's own background as the only surface. Padding respects `env(safe-area-inset-top)` instead of the bottom inset.
 
 ### Success/Danger Semantic Tones
 **Role:** Form error states, Dashboard/Stats month-over-month delta indicator
@@ -587,7 +587,7 @@ them:
 | App Pattern | shadcn primitive |
 |---|---|
 | Primary/Secondary Button | `Button` (`default`/`secondary`/`ghost`/`outline` variants) |
-| Bottom Toolbar (Add/Filter/Month) | `Button` (`size="icon"`/`secondary`, default square radius) + `Select`, positioned by an app-owned fixed wrapper |
+| Bottom Toolbar (Add/Filter/Month) | `Button` (`size="icon"` + default variant, default square radius) + `Select` (colors overridden to match), positioned by an app-owned fixed wrapper |
 | Form Field / Input | `Input` + `Label` |
 | OTP Code Input | `InputOTP` |
 | Bottom Sheet (add/edit expense) | `Sheet` (`side="bottom"`) |
