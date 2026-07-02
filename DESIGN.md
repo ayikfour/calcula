@@ -316,8 +316,51 @@ Two guards, both required:
   (`react-remove-scroll`, applied automatically while the sheet is open)
   handles the rest by blocking touchmove outside the sheet's scrollable area.
 
+**Add/edit form layout (`AddExpenseSheet.tsx`):** below the amount field, two
+compact rows of existing `Chip`/`Button` primitives replace what used to be
+full-width labeled sections. Row one: a date pill that opens a calendar
+picker (see below) plus a "who paid" `Chip` that toggles between the two
+possible payers on tap. Row two: a category `Chip` (icon + name + trailing
+`CaretRight`) that opens the category picker, next to the full-width Save
+`Button`. The old "Split" toggle was removed from the UI entirely — new
+expenses default to `payer_only`, and editing an expense that was previously
+split evenly leaves its stored `split` value untouched (no control exists to
+change it, so it's never overwritten).
+
+**Date picker:** the date pill opens a `Popover` + `Calendar` (shadcn
+primitives, added via `shadcn add popover calendar` — pulls in `react-day-picker`
+and `date-fns` as new dependencies, both free/client-side, no cost concern).
+An earlier version tried a `<label htmlFor="date">` wrapping a visually-hidden
+native `<input type="date">`, relying on label→input association to trigger
+the OS picker — this didn't reliably open on tap, hence the switch to a real
+calendar UI. The date pill itself is a plain `<button>` carrying `Chip`'s own
+class list (not an actual `Chip`, since it's wrapped in a `PopoverTrigger
+asChild` rather than being its own Radix Toggle) so it's visually identical
+to the `Chip`-based pills next to it. `expense_date` is stored as a plain
+`YYYY-MM-DD` string; conversion to/from the `Calendar`'s `Date` object is done
+via local year/month/day getters (`toISODateLocal`/`parseISODateLocal` in
+`AddExpenseSheet.tsx`), not `toISOString()`/direct date-string parsing —
+both of those are UTC-based and can silently shift the date by one day
+depending on the viewer's timezone offset.
+
+**Nested-overlay dismissal:** the category picker (a second, sibling `Sheet`)
+and the date picker (a `Popover`) both stack on top of the add/edit sheet
+without being JSX descendants of it — so Radix's dismissable-layer doesn't
+recognize either as "inside" the outer sheet, and a tap inside them reads as
+an outside-click that would otherwise close the outer sheet too. The fix is
+an `onPointerDownOutside` handler on the outer `SheetContent` that inspects
+the event's actual target — `target.closest('[role="dialog"]')` for the
+nested sheet, `target.closest('[data-slot="popover-content"]')` for the
+popover — and calls `event.preventDefault()` if the "outside" click actually
+landed inside either. Checking local state (e.g. a `categoryPickerOpen`
+boolean) instead of the DOM doesn't work here: selecting a category flushes
+its own "now closed" state before the outer sheet's outside-click handler
+runs, so a state read at that point is already stale.
+
 ### Category Chip Grid
-**Role:** Category selector inside the add/edit form
+**Role:** Category selector, opened from the add/edit form's category pill as
+its own nested bottom `Sheet` (a second, independent `Sheet`/`SheetContent`
+instance, not inline in the form)
 
 2-row scrollable horizontal strip of category pills. Each pill: 9999px radius, height 36px, padding 8px 14px, gap 8px. Inactive: background #282828, text #686868. Active/selected: background #3d3d3d, text #e5e5e5, 1px #e5e5e5 at 20% border. Emoji icon at 16px + name at 13px weight 500. Never truncate.
 

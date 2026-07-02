@@ -6,21 +6,13 @@ import { useExpenses } from '../hooks/useExpenses'
 import { useCategories } from '../hooks/useCategories'
 import { useCoupleMembers } from '../hooks/useCoupleMembers'
 import { AddExpenseSheet } from '../components/AddExpenseSheet'
-import { formatCurrency } from '../lib/format'
+import { formatCurrency, formatDateLabel } from '../lib/format'
 import type { Expense } from '../types'
 import { Button } from '@/components/ui/button'
 import { Chip } from '@/components/ui/chip'
 import { Separator } from '@/components/ui/separator'
 
 const TOAST_COPY = { added: 'Expense added', updated: 'Expense updated', deleted: 'Expense deleted' } as const
-
-function formatDateHeader(dateStr: string): string {
-  const today = new Date().toISOString().split('T')[0]
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
-  if (dateStr === today) return 'Today'
-  if (dateStr === yesterday) return 'Yesterday'
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-}
 
 export function LogPage() {
   const { user, couple } = useAuth()
@@ -141,7 +133,7 @@ export function LogPage() {
                 {/* Date header */}
                 <div className="flex items-baseline justify-between px-5 pt-3 pb-1.5">
                   <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    {formatDateHeader(date)}
+                    {formatDateLabel(date)}
                   </span>
                   <span className="font-heading text-xs text-muted-foreground">
                     {formatCurrency(items.reduce((s, e) => s + e.amount, 0))}
