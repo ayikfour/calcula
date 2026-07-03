@@ -4,8 +4,10 @@ import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { getCurrency } from '../lib/currencies'
 import { CurrencyDrawer } from '../components/CurrencyDrawer'
+import { PasswordInput } from '../components/PasswordInput'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { Check, CaretRight, Copy } from '@phosphor-icons/react'
 
 export function SettingsPage() {
@@ -13,6 +15,10 @@ export function SettingsPage() {
   const [inviteCode, setInviteCode] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [currencyDrawerOpen, setCurrencyDrawerOpen] = useState(false)
+  const [passwordFormOpen, setPasswordFormOpen] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     if (!couple) return
@@ -29,6 +35,21 @@ export function SettingsPage() {
     await navigator.clipboard.writeText(inviteCode)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault()
+    setSavingPassword(true)
+    setPasswordError('')
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setSavingPassword(false)
+    if (error) {
+      setPasswordError(error.message || 'Could not update password. Try again.')
+      return
+    }
+    toast('Password updated')
+    setNewPassword('')
+    setPasswordFormOpen(false)
   }
 
   async function selectCurrency(code: string) {
@@ -57,6 +78,58 @@ export function SettingsPage() {
           <p className="text-sm text-muted-foreground">
             Signed in as <span className="font-medium text-foreground">{couple.display_name}</span>
           </p>
+        )}
+      </Card>
+
+      {/* Security */}
+      <Card className="space-y-3 p-5">
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          Security
+        </p>
+        {passwordFormOpen ? (
+          <form onSubmit={handleChangePassword} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="settings-new-password">New password</Label>
+              <PasswordInput
+                id="settings-new-password"
+                autoComplete="new-password"
+                placeholder="At least 6 characters"
+                value={newPassword}
+                onChange={setNewPassword}
+                required
+              />
+            </div>
+
+            {passwordError && (
+              <p className="text-xs text-destructive">{passwordError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1"
+                onClick={() => { setPasswordFormOpen(false); setNewPassword(''); setPasswordError('') }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={savingPassword || newPassword.length < 6}
+              >
+                {savingPassword ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <button
+            onClick={() => setPasswordFormOpen(true)}
+            className="flex w-full items-center justify-between rounded-lg bg-muted px-4 py-3.5 text-left"
+          >
+            <span className="text-base text-foreground">Change password</span>
+            <CaretRight className="size-3.5 text-muted-foreground" />
+          </button>
         )}
       </Card>
 

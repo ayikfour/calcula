@@ -26,6 +26,13 @@ export default defineConfig({
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        // @ts-expect-error — capture_links isn't in the Web App Manifest
+        // TS types yet, but is supported by Chromium-based browsers. Makes
+        // links within scope open in the already-installed PWA window
+        // instead of a new browser tab (Android only — iOS Safari has no
+        // equivalent, see AuthPage's standalone-detection copy for why the
+        // OTP code path exists).
+        capture_links: 'existing-client-navigate',
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },

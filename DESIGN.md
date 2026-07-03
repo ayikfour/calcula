@@ -481,7 +481,7 @@ Full-width, height 48px, radius 9999px, background #ffffff, text #000000, DM San
 Full-width, height 48px, radius 9999px, glass treatment (background #1d1d1d 80%, backdrop blur 20px, 1px #e5e5e5 at 10% border). Text #e5e5e5, DM Sans 16px weight 500.
 
 ### Mode Switcher (Segmented Pill)
-**Role:** Toggle between two mutually exclusive modes (Create / Join)
+**Role:** Toggle between two mutually exclusive modes (Create/Join on Onboarding; Password/Email code on the Auth screen)
 
 Pill container, radius 9999px, background #1d1d1d, padding 4px. Two equal segments; active segment: background #3d3d3d, radius 9999px, text #e5e5e5 weight 500. Inactive: text #686868 weight 400. DM Sans 15px.
 
@@ -508,11 +508,18 @@ Success: `#4ade80` (muted green — readable on dark surfaces without being neon
 Fixed, bottom-centered above the FAB/nav, glass pill (background #1d1d1d 90%, backdrop blur 20px, 1px #e5e5e5 at 10% border), radius 9999px, padding 12px 20px. DM Sans 14px weight 500, color #e5e5e5. Optional leading checkmark in `--color-success`. Slides up + fades in (200ms), auto-dismisses after 2.5s, no manual close control — keep it out of the way of the next action.
 
 ### OTP Code Input
-**Role:** Fallback sign-in on the auth screen — type the email code instead of tapping the magic link (needed when the link can't be followed, e.g. sandboxed preview panes)
+**Role:** Code-entry step wherever email ownership needs verifying — the Email code tab's sign-in (fallback to tapping the magic link), password sign-up confirmation, and password recovery, on the Auth screen
 
-Built on shadcn's `InputOTP`, two groups of 4 boxes separated by a divider (`InputOTPSeparator`). **8 digits, not 6** — this project's `genkin-dev` Supabase instance issues 8-digit email OTPs (re-check the prod project if this ever changes), and the input previously capped at 6 characters, silently truncating real codes and blocking the whole fallback path. Sits below the "Check your email" copy as a secondary path, separated by a hairline divider with "or enter the code" label. Verify action reuses the primary `Button`.
+Built on shadcn's `InputOTP`, two groups of 4 boxes separated by a divider (`InputOTPSeparator`). **8 digits, not 6** — this project's `genkin-dev` Supabase instance issues 8-digit email OTPs for the Magic Link template (re-check the prod project if this ever changes, and re-check the Confirm Signup/Reset Password templates too if their digit count ever diverges from the Magic Link one). In the Email code tab, sits below the "Check your email" copy as a secondary path, separated by a hairline divider with "or enter the code" label. Verify action reuses the primary `Button`.
 
-For local testing where the magic link can't reach the environment (e.g. a preview pane with its own browser context, separate from your inbox), `scripts/dev-otp.mjs` generates a real OTP via the Supabase admin API — no email round-trip needed. See the script's header comment for usage.
+Tapping the emailed magic link always opens the OS default browser, never an installed PWA — and on iOS the installed PWA's storage is sandboxed separately from Safari, so a sign-in completed in the browser tab can't hand off a session to the home-screen app anyway. [EmailCodeAuthForm.tsx](src/components/EmailCodeAuthForm.tsx) and [PasswordAuthForm.tsx](src/components/PasswordAuthForm.tsx) both detect standalone display mode (`isStandalonePwa()` in [utils.ts](src/lib/utils.ts)) and swap the "check your email" copy to lead with the code (and drop the "or") when running installed, since the code path is the only one that reliably works there. The manifest also sets `capture_links: 'existing-client-navigate'`, which lets Chromium/Android PWAs capture the link back into the existing app window — no iOS equivalent exists, so the code path stays the primary fix.
+
+For local testing where the magic link can't reach the environment (e.g. a preview pane with its own browser context, separate from your inbox), `scripts/dev-otp.mjs` generates a real OTP via the Supabase admin API for any of the three flows (`magiclink`/`signup`/`recovery`) — no email round-trip needed. See the script's header comment for usage.
+
+### Password Input
+**Role:** Password entry on the Auth screen's Password tab (sign-in, sign-up, recovery) and Settings' Change Password action
+
+Wraps the standard Form Field/Input pattern above (same 48px height, `#1d1d1d` background, 10px radius — no new tokens) with a visibility toggle: a ghost icon `Button` (`size="icon-sm"`, 28px, the compact size reserved for secondary chrome) absolutely positioned inside the input's trailing edge, swapping Phosphor `Eye`/`EyeSlash` to switch the field between `type="password"` and `type="text"`.
 
 ### Chart Card
 **Role:** Container for each Recharts visualization on the Dashboard screen
@@ -687,10 +694,11 @@ them:
 | Bottom Sheet (add/edit expense), Filter Drawer, Month Drawer | `Sheet` (`side="bottom"`) |
 | Category Picker, Filter Drawer, Month Drawer row lists | app-owned bordered/divided `<button>` rows, no shadcn equivalent — chips were tried and dropped for all three (worse scanning across many options; see **Avoid rounded chips**) |
 | Delete confirmation (expense row) | `Dialog` |
-| Mode Switcher (Create/Join) | `Tabs`, styled as a segmented control |
+| Mode Switcher (Create/Join; Password/Email code) | `Tabs`, styled as a segmented control |
 | Toast/Snackbar | `Sonner` (`<Toaster />` mounted once at the app root) |
 | Chart Card (Dashboard) | `Card` wrapping the existing Recharts charts |
 | Invite Code Display | `Input` (readOnly) + icon `Button` (copy), composed manually |
+| Password Input | `Input` + icon `Button` (`variant="ghost" size="icon-sm"`) with Phosphor `Eye`/`EyeSlash`, composed inside the input |
 | Empty State | `Card` + `Button`, composed manually |
 | Top Nav | app-owned (no shadcn equivalent); restyled with shadcn tokens + `cn()` |
 | Loading spinner (`ProtectedRoute`) | `Skeleton`, or a Phosphor spinner icon + `animate-spin` |
