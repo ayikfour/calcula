@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Check } from '@phosphor-icons/react'
 import type { Category, CoupleMember } from '../types'
 import {
   Sheet,
@@ -8,7 +9,6 @@ import {
   SheetFooter,
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { Chip } from '@/components/ui/chip'
 
 interface Props {
   isOpen: boolean
@@ -16,9 +16,9 @@ interface Props {
   categories: Category[]
   members: CoupleMember[]
   currentUserId: string | undefined
-  selectedCategory: string | null
+  selectedCategories: string[]
   selectedPayer: string | null
-  onApply: (category: string | null, payer: string | null) => void
+  onApply: (categories: string[], payer: string | null) => void
 }
 
 export function FilterDrawer({
@@ -27,33 +27,39 @@ export function FilterDrawer({
   categories,
   members,
   currentUserId,
-  selectedCategory,
+  selectedCategories,
   selectedPayer,
   onApply,
 }: Props) {
-  const [pendingCategory, setPendingCategory] = useState<string | null>(selectedCategory)
+  const [pendingCategories, setPendingCategories] = useState<string[]>(selectedCategories)
   const [pendingPayer, setPendingPayer] = useState<string | null>(selectedPayer)
 
   useEffect(() => {
     if (!isOpen) return
-    setPendingCategory(selectedCategory)
+    setPendingCategories(selectedCategories)
     setPendingPayer(selectedPayer)
-  }, [isOpen, selectedCategory, selectedPayer])
+  }, [isOpen, selectedCategories, selectedPayer])
 
   const payerOptions = members.map(m => ({
     label: m.user_id === currentUserId ? 'You' : m.display_name,
     value: m.user_id,
   }))
 
+  function toggleCategory(name: string) {
+    setPendingCategories(prev =>
+      prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]
+    )
+  }
+
   function handleReset() {
-    setPendingCategory(null)
+    setPendingCategories([])
     setPendingPayer(null)
-    onApply(null, null)
+    onApply([], null)
     onClose()
   }
 
   function handleFilter() {
-    onApply(pendingCategory, pendingPayer)
+    onApply(pendingCategories, pendingPayer)
     onClose()
   }
 
@@ -69,16 +75,20 @@ export function FilterDrawer({
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               Paid by
             </p>
-            <div className="flex flex-wrap gap-2">
-              {payerOptions.map(opt => (
-                <Chip
-                  key={opt.value}
-                  pressed={pendingPayer === opt.value}
-                  onPressedChange={() => setPendingPayer(pendingPayer === opt.value ? null : opt.value)}
-                >
-                  {opt.label}
-                </Chip>
-              ))}
+            <div className="overflow-hidden rounded-lg border border-border">
+              {payerOptions.map(opt => {
+                const selected = pendingPayer === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setPendingPayer(selected ? null : opt.value)}
+                    className="flex w-full items-center justify-between border-b border-border px-4 py-3.5 text-left text-sm font-medium text-foreground last:border-b-0"
+                  >
+                    {opt.label}
+                    {selected && <Check className="size-4" weight="bold" />}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -86,16 +96,22 @@ export function FilterDrawer({
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               Category
             </p>
-            <div className="flex flex-wrap gap-2">
-              {categories.map(cat => (
-                <Chip
-                  key={cat.id}
-                  pressed={pendingCategory === cat.name}
-                  onPressedChange={() => setPendingCategory(pendingCategory === cat.name ? null : cat.name)}
-                >
-                  <span>{cat.icon}</span> {cat.name}
-                </Chip>
-              ))}
+            <div className="overflow-hidden rounded-lg border border-border">
+              {categories.map(cat => {
+                const selected = pendingCategories.includes(cat.name)
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => toggleCategory(cat.name)}
+                    className="flex w-full items-center justify-between border-b border-border px-4 py-3.5 text-left text-sm font-medium text-foreground last:border-b-0"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>{cat.icon}</span> {cat.name}
+                    </span>
+                    {selected && <Check className="size-4" weight="bold" />}
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>

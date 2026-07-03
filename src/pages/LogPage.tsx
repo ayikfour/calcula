@@ -31,7 +31,7 @@ export function LogPage() {
   const categories = useCategories()
   const members = useCoupleMembers(couple?.couple_id)
 
-  const [filterCategory, setFilterCategory] = useState<string | null>(null)
+  const [filterCategories, setFilterCategories] = useState<string[]>([])
   const [filterPaidBy, setFilterPaidBy] = useState<string | null>(null)
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
@@ -60,10 +60,10 @@ export function LogPage() {
   const filtered = useMemo(() => {
     let result = expenses
     if (selectedMonth) result = result.filter(e => e.expense_date.slice(0, 7) === selectedMonth)
-    if (filterCategory) result = result.filter(e => e.category === filterCategory)
+    if (filterCategories.length > 0) result = result.filter(e => filterCategories.includes(e.category))
     if (filterPaidBy) result = result.filter(e => e.paid_by === filterPaidBy)
     return result
-  }, [expenses, selectedMonth, filterCategory, filterPaidBy])
+  }, [expenses, selectedMonth, filterCategories, filterPaidBy])
 
   // Group by date
   const grouped = useMemo(() => {
@@ -90,7 +90,7 @@ export function LogPage() {
   }
 
   const catIcons = Object.fromEntries(categories.map(c => [c.name, c.icon]))
-  const activeFilterCount = (filterCategory ? 1 : 0) + (filterPaidBy ? 1 : 0)
+  const activeFilterCount = filterCategories.length + (filterPaidBy ? 1 : 0)
   const hasActiveFilters = activeFilterCount > 0
 
   return (
@@ -201,9 +201,9 @@ export function LogPage() {
         categories={categories}
         members={members}
         currentUserId={user?.id}
-        selectedCategory={filterCategory}
+        selectedCategories={filterCategories}
         selectedPayer={filterPaidBy}
-        onApply={(category, payer) => { setFilterCategory(category); setFilterPaidBy(payer) }}
+        onApply={(cats, payer) => { setFilterCategories(cats); setFilterPaidBy(payer) }}
       />
 
       <Dialog open={!!deletingExpense} onOpenChange={open => !open && setDeletingExpense(null)}>

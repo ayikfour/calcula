@@ -369,12 +369,12 @@ instance, not inline in the form)
 ### Filter Drawer
 **Role:** Category and payer filter on the Log screen, opened from a "Filter" button in the toolbar row
 
-Bottom `Sheet` (same primitive/pattern as the Add/Edit Expense sheet and the Category Chip Grid below — a sibling `Sheet` instance, not nested inline). Contains a "Paid by" `Chip` group and a "Category" `Chip` grid, each under a small uppercase label. Selections are staged locally and only committed on tap; a two-button footer (`SheetFooter`, row layout) holds "Reset" (secondary `Button`, clears both filters and closes) and "Filter" (primary `Button`, applies the staged selections and closes). The "Filter" toolbar button reflects active-filter count in its own label ("1 · Filter", "2 · Filter") rather than a separate dot indicator.
+Bottom `Sheet` (same primitive/pattern as the Add/Edit Expense sheet — a sibling `Sheet` instance, not nested inline). Contains a "Paid by" list and a "Category" list, each under a small uppercase label — **vertical selectable lists, not `Chip`/pill rows**: chips were tried first but read poorly for scanning multiple options, so both groups render as a bordered, divided stack of full-width rows (`rounded-lg border border-border`, each row `border-b border-border last:border-b-0`, `px-4 py-3.5`), label left, a `Check` icon right when selected. "Paid by" is single-select (tapping the already-selected row clears it back to no filter). "Category" is **multi-select** — tapping toggles that category in/out of a `string[]`, any number can be active at once. Selections are staged locally and only committed on tap; a two-button footer (`SheetFooter`, row layout) holds "Reset" (secondary `Button`, clears both filters and closes) and "Filter" (primary `Button`, applies the staged selections and closes). The "Filter" toolbar button reflects active-filter count in its own label ("1 · Filter", "2 · Filter" — category selections and the payer selection each count toward the total) rather than a separate dot indicator.
 
 ### Month Drawer
 **Role:** Filter the Log screen to a single month, shown next to the Filter button
 
-Same `Sheet` + `Chip` pattern as the Filter Drawer above (not a native `Select` — swapped from an earlier `Select`-based version so all three bottom-toolbar controls open the same style of picker). The trigger is a plain `Button` (`h-12 px-4`, trailing `CaretDown`) showing the current month; tapping it opens a bottom `Sheet` titled "Month" containing one `Chip` per available month — tapping a `Chip` selects it and closes the sheet immediately (single-select, no Reset/Apply footer, matching the Category Chip Grid's tap-to-pick behavior rather than the Filter Drawer's stage-then-apply behavior). Options are generated dynamically from the distinct months present in the couple's `expense_date` values (not a static calendar list) — sorted most-recent-first, defaulting to the most recent month with data. Label shows just the month name ("October"), or "Month Year" if the couple's history spans more than one calendar year.
+Same `Sheet` + vertical list pattern as the Filter Drawer above (not a native `Select`, and not `Chip`/pill rows either — both were tried and dropped for the same readability reason). The trigger is a plain `Button` (`h-12 px-4`, trailing `CaretDown`) showing the current month; tapping it opens a bottom `Sheet` titled "Month" containing the same bordered/divided row-list component as the Filter Drawer, one row per available month — tapping a row selects it and closes the sheet immediately (single-select, no Reset/Apply footer — picking a month is a direct action, not a staged one). Options are generated dynamically from the distinct months present in the couple's `expense_date` values (not a static calendar list) — sorted most-recent-first, defaulting to the most recent month with data. Label shows just the month name ("October"), or "Month Year" if the couple's history spans more than one calendar year.
 
 ### Empty State
 **Role:** Log screen when no expenses exist yet
@@ -593,7 +593,8 @@ them:
 | Form Field / Input | `Input` + `Label` |
 | OTP Code Input | `InputOTP` |
 | Bottom Sheet (add/edit expense), Filter Drawer, Month Drawer | `Sheet` (`side="bottom"`) |
-| Category Chip Grid, Filter Drawer, Month Drawer | `Chip` (`src/components/ui/chip.tsx`) — app-owned, built on Radix `Toggle`; shadcn has no built-in chip |
+| Category Chip Grid (add/edit expense form) | `Chip` (`src/components/ui/chip.tsx`) — app-owned, built on Radix `Toggle`; shadcn has no built-in chip |
+| Filter Drawer / Month Drawer row lists | app-owned bordered/divided `<button>` rows, no shadcn equivalent — chips were tried and dropped for these two (worse scanning across many options) |
 | Delete confirmation (expense row) | `Dialog` |
 | Mode Switcher (Create/Join) | `Tabs`, styled as a segmented control |
 | Toast/Snackbar | `Sonner` (`<Toaster />` mounted once at the app root) |

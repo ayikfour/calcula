@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { CaretDown } from '@phosphor-icons/react'
+import { CaretDown, Check } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
-import { Chip } from '@/components/ui/chip'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 
 interface Props {
@@ -35,16 +34,22 @@ export function MonthDrawer({ months, selectedMonth, onSelect }: Props) {
           <SheetHeader>
             <SheetTitle>Month</SheetTitle>
           </SheetHeader>
-          <div className="flex flex-wrap gap-2 px-4 pb-4">
-            {months.map(month => (
-              <Chip
-                key={month}
-                pressed={selectedMonth === month}
-                onPressedChange={() => { onSelect(month); setOpen(false) }}
-              >
-                {monthLabel(month, multiYear)}
-              </Chip>
-            ))}
+          <div className="px-4 pb-4">
+            <div className="overflow-hidden rounded-lg border border-border">
+              {months.map(month => {
+                const selected = selectedMonth === month
+                return (
+                  <button
+                    key={month}
+                    onClick={() => { onSelect(month); setOpen(false) }}
+                    className="flex w-full items-center justify-between border-b border-border px-4 py-3.5 text-left text-sm font-medium text-foreground last:border-b-0"
+                  >
+                    {monthLabel(month, multiYear)}
+                    {selected && <Check className="size-4" weight="bold" />}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </SheetContent>
       </Sheet>
