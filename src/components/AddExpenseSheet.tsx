@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CaretRight } from '@phosphor-icons/react'
+import { CaretRight, CaretDown } from '@phosphor-icons/react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { formatDateLabel } from '../lib/format'
@@ -13,7 +13,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Chip } from '@/components/ui/chip'
 
@@ -26,12 +25,11 @@ interface Props {
   members: CoupleMember[]
 }
 
-// Matches Chip's own class list (src/components/ui/chip.tsx) so the date
-// pill — a plain <button>, not a Chip, since it's wrapped in a PopoverTrigger
-// asChild rather than being its own Radix Toggle — looks identical to the
-// Chip-based pills next to it.
-const DATE_PILL_CLASS =
-  'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-transparent px-3.5 text-xs font-medium text-muted-foreground transition-colors outline-none hover:bg-muted'
+// Shared look for the two segments of the combined date/payer control below
+// — a bordered rectangle split in half, not the rounded Chip/pill style used
+// elsewhere, per design.md's "Date/Payer Segmented Row" pattern.
+const SEGMENT_CLASS =
+  'flex flex-1 items-center justify-between gap-1.5 px-4 py-3.5 text-left text-sm font-medium text-foreground outline-none transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50'
 
 function formatAmount(raw: string): string {
   if (!raw) return ''
@@ -141,6 +139,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
       <Sheet open={isOpen} onOpenChange={open => !open && onClose()}>
         <SheetContent
           side="bottom"
+          showCloseButton={false}
           className="max-h-[92vh] overflow-y-auto overscroll-contain rounded-t-2xl"
           onPointerDownOutside={e => {
             // The category picker is a second, sibling <Sheet>, and the date
@@ -162,11 +161,40 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
             }
           }}
         >
-          <SheetHeader>
-            <SheetTitle>{isEdit ? 'Edit expense' : 'Add expense'}</SheetTitle>
-          </SheetHeader>
+          <SheetTitle className="sr-only">{isEdit ? 'Edit expense' : 'Add expense'}</SheetTitle>
 
           <div className="space-y-4 px-4 pb-4">
+            {/* Date + who paid, combined into one bordered rectangle */}
+            <div className="flex items-stretch overflow-hidden rounded-lg border border-border">
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <button type="button" className={`${SEGMENT_CLASS} border-r border-border`}>
+                    {formatDateLabel(date)}
+                    <CaretDown className="size-3.5 text-muted-foreground" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date ? parseISODateLocal(date) : undefined}
+                    onSelect={d => {
+                      if (d) setDate(toISODateLocal(d))
+                      setDatePickerOpen(false)
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+              <button
+                type="button"
+                onClick={togglePaidBy}
+                disabled={!partner?.user_id}
+                className={SEGMENT_CLASS}
+              >
+                {currentPayerLabel}
+                <CaretRight className="size-3.5 text-muted-foreground" />
+              </button>
+            </div>
+
             {/* Amount */}
             <div className="pb-1 text-center">
               <input
@@ -182,53 +210,28 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
               />
             </div>
 
-            {/* Date + who paid */}
-            <div className="flex items-center gap-2">
-              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger asChild>
-                  <button type="button" className={DATE_PILL_CLASS}>
-                    {formatDateLabel(date)}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={date ? parseISODateLocal(date) : undefined}
-                    onSelect={d => {
-                      if (d) setDate(toISODateLocal(d))
-                      setDatePickerOpen(false)
-                    }}
-                  />
-                </PopoverContent>
-              </Popover>
-              <Chip pressed={false} onPressedChange={togglePaidBy} disabled={!partner?.user_id}>
-                {currentPayerLabel}
-              </Chip>
-            </div>
-
             {/* Description */}
-            <div className="space-y-1.5">
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                type="text"
-                placeholder="e.g. Grab, Indomaret…"
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                className="h-12"
-              />
-            </div>
+            <Input
+              id="description"
+              type="text"
+              placeholder="e.g. Grab, Indomaret…"
+              aria-label="Description"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              className="h-12"
+            />
 
             {/* Category + Save */}
             <div className="flex items-center gap-2">
-              <Chip
-                pressed={false}
-                onPressedChange={() => setCategoryPickerOpen(true)}
-                className="shrink-0"
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCategoryPickerOpen(true)}
+                className="shrink-0 gap-1.5"
               >
                 <span>{selectedCategory?.icon}</span> {selectedCategory?.name ?? 'Category'}
                 <CaretRight className="size-3.5" />
-              </Chip>
+              </Button>
               <Button onClick={handleSave} disabled={saving} className="flex-1">
                 {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add expense'}
               </Button>

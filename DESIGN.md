@@ -318,29 +318,42 @@ Two guards, both required:
   (`react-remove-scroll`, applied automatically while the sheet is open)
   handles the rest by blocking touchmove outside the sheet's scrollable area.
 
-**Add/edit form layout (`AddExpenseSheet.tsx`):** below the amount field, two
-compact rows of existing `Chip`/`Button` primitives replace what used to be
-full-width labeled sections. Row one: a date pill that opens a calendar
-picker (see below) plus a "who paid" `Chip` that toggles between the two
-possible payers on tap. Row two: a category `Chip` (icon + name + trailing
-`CaretRight`) that opens the category picker, next to the full-width Save
-`Button`. The "Split" feature (the old evenly-split-expense toggle, its
+**Add/edit form layout (`AddExpenseSheet.tsx`):** no visible sheet chrome at
+the top — `showCloseButton={false}` drops the `X`, and `SheetTitle` is kept
+only as a `sr-only` node (Radix requires an accessible title for
+`aria-labelledby`; it just isn't rendered visually). The drag handle plus
+drag-to-dismiss (see below) and tapping the overlay/pressing Escape are the
+only ways to close it — there's no dedicated close affordance, mirroring the
+Filter/Month drawers' full-bleed content. In place of the old header sits a
+**Date/Payer Segmented Row**: one bordered rectangle (`rounded-lg border
+border-border`, `overflow-hidden`) split into two equal `flex-1` segments by
+an internal `border-r` — left segment opens the date `Popover`/`Calendar`
+(trailing `CaretDown`), right segment toggles who paid on tap (trailing
+`CaretRight`, disabled with no partner). Neither segment uses `Chip` — chips
+read as filter/selection pills elsewhere in the app, and this row is a
+direct-action control, not a selection, so it gets the same bordered
+rectangle language as buttons instead. Below that: the amount, a plain
+`Input` for description (no `Label` above it — the placeholder carries the
+meaning, though an `aria-label="Description"` keeps it named for screen
+readers), then a final row pairing a `Button` (`variant="outline"`, icon +
+name + trailing `CaretRight`) that opens the category picker with the
+full-width primary Save `Button` — the category trigger used to be a `Chip`
+too, now it's a bordered `Button` so it visually reads as the same weight of
+control as "Add expense"/"Save changes" beside it, just secondary instead of
+primary. The "Split" feature (the old evenly-split-expense toggle, its
 `expenses.split` column, and the Balance screen that read it) has been
 removed entirely — not just hidden from the UI. There is no split state to
 track in this form anymore.
 
-**Date picker:** the date pill opens a `Popover` + `Calendar` (shadcn
+**Date picker:** the date segment opens a `Popover` + `Calendar` (shadcn
 primitives, added via `shadcn add popover calendar` — pulls in `react-day-picker`
 and `date-fns` as new dependencies, both free/client-side, no cost concern).
 An earlier version tried a `<label htmlFor="date">` wrapping a visually-hidden
 native `<input type="date">`, relying on label→input association to trigger
 the OS picker — this didn't reliably open on tap, hence the switch to a real
-calendar UI. The date pill itself is a plain `<button>` carrying `Chip`'s own
-class list (not an actual `Chip`, since it's wrapped in a `PopoverTrigger
-asChild` rather than being its own Radix Toggle) so it's visually identical
-to the `Chip`-based pills next to it. `expense_date` is stored as a plain
-`YYYY-MM-DD` string; conversion to/from the `Calendar`'s `Date` object is done
-via local year/month/day getters (`toISODateLocal`/`parseISODateLocal` in
+calendar UI. `expense_date` is stored as a plain `YYYY-MM-DD` string;
+conversion to/from the `Calendar`'s `Date` object is done via local
+year/month/day getters (`toISODateLocal`/`parseISODateLocal` in
 `AddExpenseSheet.tsx`), not `toISOString()`/direct date-string parsing —
 both of those are UTC-based and can silently shift the date by one day
 depending on the viewer's timezone offset.
