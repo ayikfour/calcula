@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Plus, Receipt, SpinnerGap, CaretUpDown } from '@phosphor-icons/react'
+import { Plus, Receipt, SpinnerGap, CaretDown } from '@phosphor-icons/react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useExpenses } from '../hooks/useExpenses'
@@ -90,7 +90,8 @@ export function LogPage() {
   }
 
   const catIcons = Object.fromEntries(categories.map(c => [c.name, c.icon]))
-  const hasActiveFilters = !!(filterCategory || filterPaidBy)
+  const activeFilterCount = (filterCategory ? 1 : 0) + (filterPaidBy ? 1 : 0)
+  const hasActiveFilters = activeFilterCount > 0
 
   return (
     <>
@@ -170,11 +171,10 @@ export function LogPage() {
         <div className="flex items-center gap-2">
           <Button
             onClick={() => { setFilterDrawerOpen(true); setOpenSwipeRowId(null) }}
-            className="gap-1.5"
+            className="h-12 gap-1.5 px-4"
           >
-            Filter
-            <CaretUpDown className="size-3.5" />
-            {hasActiveFilters && <span className="size-1.5 rounded-full bg-primary-foreground" />}
+            {hasActiveFilters ? `${activeFilterCount} · Filter` : 'Filter'}
+            <CaretDown className="size-3.5" />
           </Button>
           {availableMonths.length > 0 && selectedMonth && (
             <MonthDropdown

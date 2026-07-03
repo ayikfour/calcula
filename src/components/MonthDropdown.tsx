@@ -20,7 +20,7 @@ export function MonthDropdown({ months, selectedMonth, onSelect }: Props) {
 
   return (
     <Select value={selectedMonth} onValueChange={onSelect}>
-      <SelectTrigger className="border-transparent bg-primary text-primary-foreground hover:bg-primary/80 dark:bg-primary dark:hover:bg-primary/80 [&_svg]:text-primary-foreground">
+      <SelectTrigger className="border-transparent bg-primary px-4 text-primary-foreground hover:bg-primary/80 data-[size=default]:h-12 dark:bg-primary dark:hover:bg-primary/80 [&_svg]:text-primary-foreground">
         <SelectValue>{monthLabel(selectedMonth, multiYear)}</SelectValue>
       </SelectTrigger>
       <SelectContent align="end">
