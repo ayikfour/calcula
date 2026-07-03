@@ -249,6 +249,24 @@ Centered max-width container at 1200px with a two-column hero (text-left ~40%, m
 > appears) still holds; only the visual treatment (colors, pill radii, glass
 > blur) is being replaced screen-by-screen as the migration proceeds.
 
+### Avoid rounded chips
+**Role:** House rule for any new selection UI (choosing one item from a list of options)
+
+Don't reach for the rounded `Chip` pill (`src/components/ui/chip.tsx`) for
+new selection controls — prefer the bordered/divided vertical row-list
+pattern already used by the Filter Drawer, Month Drawer, and Category
+Picker (`overflow-hidden rounded-lg border border-border` container, rows
+`border-b border-border last:border-b-0`, `px-4 py-3.5`, label left, `Check`
+icon right when selected). Chips were tried for exactly this — category
+selection, filters, months — and dropped every time for the same reason:
+rounded pills scan poorly once there's more than a couple of options,
+whereas a vertical list reads top-to-bottom like normal text. The `Chip`
+component itself has been removed from the codebase since nothing uses it
+anymore; if a genuinely chip-shaped need comes up (e.g. a small always-
+visible multi-select tag row with very few options), re-add it deliberately
+rather than resurrecting the deleted file, and document why the row-list
+didn't fit here first.
+
 ### Expense List Row
 **Role:** Single item in the shared expense log
 
@@ -327,20 +345,24 @@ only as a `sr-only` node (Radix requires an accessible title for
 drag-to-dismiss (see below) and tapping the overlay/pressing Escape are the
 only ways to close it — there's no dedicated close affordance, mirroring the
 Filter/Month drawers' full-bleed content. In place of the old header sits a
-**Date/Payer Segmented Row**: one bordered rectangle (`rounded-lg border
-border-border`, `overflow-hidden`) split into two segments by an internal
-`border-r` — left segment opens the date `Popover`/`Calendar` (trailing
-`CaretDown`), right segment toggles who paid on tap (trailing `CaretRight`,
-disabled with no partner). The container is `inline-flex` and the segments
-size to their own content (no `flex-1`) — the row is meant to read as a
-compact control sitting in the corner, not a full-width bar, matching the
+**Date/Payer/Recurring Segmented Row**: one bordered rectangle (`rounded-lg
+border border-border`, `overflow-hidden`) split into segments by internal
+`border-r` dividers — first segment opens the date `Popover`/`Calendar`
+(trailing `CaretDown`), second toggles who paid on tap (trailing
+`CaretRight`, disabled with no partner), and a third — present only when the
+expense isn't already part of a recurring series — toggles Recurring on/off
+directly on tap. The container is `inline-flex` and the segments size to
+their own content (no `flex-1`) — the row is meant to read as a compact
+control sitting in the corner, not a full-width bar, matching the
 Filter/Month toolbar buttons' proportions rather than stretching edge to
-edge. Neither segment uses `Chip` — chips read as filter/selection pills
+edge. No segment uses `Chip` — chips read as filter/selection pills
 elsewhere in the app, and this row is a direct-action control, not a
 selection, so it gets the same bordered rectangle language as buttons
 instead. Below that: the amount, given `py-6` (24px) of breathing room above
 and below so it doesn't feel squeezed between the segmented row and the
-description field; a plain `Input` for description at the standard `h-12`
+description field, and a tight `gap-1` (4px) between the currency symbol and
+the figure so they read as one unit rather than two separate elements; a
+plain `Input` for description at the standard `h-12`
 (48px) input height — a taller `h-[72px]` was tried and looked oversized/
 disproportionate for a single-line field, so it stayed at the default — with
 no `Label` above it — the placeholder carries the meaning,
@@ -355,21 +377,23 @@ primary. The "Split" feature (the old evenly-split-expense toggle, its
 removed entirely — not just hidden from the UI. There is no split state to
 track in this form anymore.
 
-**Recurring toggle:** sits between the description field and the
-category/save row, and only appears when the expense isn't already part of a
-recurring series (a brand-new expense, or an existing one-off being edited
-retroactively). It's a single `Chip` labeled "🔁 Recurring" — reusing the same
-pill primitive as the Category Chip Grid rather than introducing a new
-toggle/switch component. Pressing it reveals a Weekly/Monthly/Yearly picker
-directly underneath, using the same bordered/divided row-list pattern as the
+**Recurring toggle:** the third segment of the row above, labeled "🔁
+Recurring" while off. Tapping it toggles `isRecurring` directly (no popover)
+and, once on, swaps its own label to the current frequency ("🔁 Monthly")
+with a trailing `Check` and the same `bg-secondary text-secondary-foreground`
+treatment `Chip`'s selected state uses elsewhere — so the segment itself
+communicates the current value, the same way the date and payer segments do.
+Turning it on reveals a Weekly/Monthly/Yearly picker directly below the
+description field, using the same bordered/divided row-list pattern as the
 Filter Drawer (`rounded-lg border border-border`, rows with `border-b
 border-border last:border-b-0`, `px-4 py-3.5`, trailing `Check` when
-selected) rather than a second `Chip` row — single-select, no
-Reset/Apply footer, since it's local to this one field. If the expense being
-edited is already linked to an active series, this whole control is replaced
-by a static muted line ("🔁 Recurring · Monthly — manage this from Upcoming
-on the Log page") — editing or stopping an existing series only happens from
-the Upcoming list, not from an individual generated expense, to avoid
+selected) — single-select, no Reset/Apply footer, since it's local to this
+one field. If the expense being edited is already linked to an active
+series, the third segment doesn't render at all (row goes back to two
+segments) and a static muted line takes its place below the description
+field instead ("🔁 Recurring · Monthly — manage this from Upcoming on the Log
+page") — editing or stopping an existing series only happens from the
+Upcoming list, not from an individual generated expense, to avoid
 this-vs-all-future edit ambiguity.
 
 **Date picker:** the date segment opens a `Popover` + `Calendar` (shadcn
@@ -399,12 +423,22 @@ boolean) instead of the DOM doesn't work here: selecting a category flushes
 its own "now closed" state before the outer sheet's outside-click handler
 runs, so a state read at that point is already stale.
 
-### Category Chip Grid
-**Role:** Category selector, opened from the add/edit form's category pill as
+### Category Picker
+**Role:** Category selector, opened from the add/edit form's category button as
 its own nested bottom `Sheet` (a second, independent `Sheet`/`SheetContent`
 instance, not inline in the form)
 
-2-row scrollable horizontal strip of category pills. Each pill: 9999px radius, height 36px, padding 8px 14px, gap 8px. Inactive: background #282828, text #686868. Active/selected: background #3d3d3d, text #e5e5e5, 1px #e5e5e5 at 20% border. Emoji icon at 16px + name at 13px weight 500. Never truncate.
+Same bordered/divided vertical row-list as the Filter Drawer below — one
+`overflow-hidden rounded-lg border border-border` container, each row
+`border-b border-border last:border-b-0`, `px-4 py-3.5`, icon + name left, a
+`Check` icon right when selected. Single-select, direct-action (no
+Reset/Apply footer) — tapping a row sets the category and closes the sheet
+immediately, same as the Month Drawer. This used to be a 2-row scrollable
+strip of rounded `Chip` pills; switched to match the Filter/Month row-list
+for the same reason those two dropped chips — vertical lists scan better
+once there are more than a couple of options, and it keeps every selection
+surface in the app using one consistent pattern. See **Avoid rounded chips**
+below.
 
 ### Filter Drawer
 **Role:** Category and payer filter on the Log screen, opened from a "Filter" button in the toolbar row
@@ -651,8 +685,7 @@ them:
 | Form Field / Input | `Input` + `Label` |
 | OTP Code Input | `InputOTP` |
 | Bottom Sheet (add/edit expense), Filter Drawer, Month Drawer | `Sheet` (`side="bottom"`) |
-| Category Chip Grid (add/edit expense form) | `Chip` (`src/components/ui/chip.tsx`) — app-owned, built on Radix `Toggle`; shadcn has no built-in chip |
-| Filter Drawer / Month Drawer row lists | app-owned bordered/divided `<button>` rows, no shadcn equivalent — chips were tried and dropped for these two (worse scanning across many options) |
+| Category Picker, Filter Drawer, Month Drawer row lists | app-owned bordered/divided `<button>` rows, no shadcn equivalent — chips were tried and dropped for all three (worse scanning across many options; see **Avoid rounded chips**) |
 | Delete confirmation (expense row) | `Dialog` |
 | Mode Switcher (Create/Join) | `Tabs`, styled as a segmented control |
 | Toast/Snackbar | `Sonner` (`<Toaster />` mounted once at the app root) |

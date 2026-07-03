@@ -16,7 +16,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Chip } from '@/components/ui/chip'
 
 interface Props {
   isOpen: boolean
@@ -28,9 +27,9 @@ interface Props {
   recurringExpenses: RecurringExpense[]
 }
 
-// Shared look for the two segments of the combined date/payer control below
-// — a bordered rectangle split in half, not the rounded Chip/pill style used
-// elsewhere, per design.md's "Date/Payer Segmented Row" pattern.
+// Shared look for the segments of the combined date/payer/recurring control
+// below — a bordered rectangle split into segments, per design.md's
+// "Date/Payer/Recurring Segmented Row" pattern.
 const SEGMENT_CLASS =
   'flex items-center justify-between gap-1.5 px-4 py-3.5 text-left text-sm font-medium text-foreground outline-none transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50'
 
@@ -194,7 +193,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
           <SheetTitle className="sr-only">{isEdit ? 'Edit expense' : 'Add expense'}</SheetTitle>
 
           <div className="space-y-4 px-4 pb-4">
-            {/* Date + who paid, combined into one bordered rectangle */}
+            {/* Date + who paid + recurring, combined into one bordered rectangle */}
             <div className="inline-flex items-stretch overflow-hidden rounded-lg border border-border">
               <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
@@ -218,15 +217,25 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
                 type="button"
                 onClick={togglePaidBy}
                 disabled={!partner?.user_id}
-                className={SEGMENT_CLASS}
+                className={alreadyLinked ? SEGMENT_CLASS : `${SEGMENT_CLASS} border-r border-border`}
               >
                 {currentPayerLabel}
                 <CaretRight className="size-3.5 text-muted-foreground" />
               </button>
+              {!alreadyLinked && (
+                <button
+                  type="button"
+                  onClick={() => setIsRecurring(v => !v)}
+                  className={`${SEGMENT_CLASS} ${isRecurring ? 'bg-secondary text-secondary-foreground' : ''}`}
+                >
+                  {isRecurring ? FREQUENCY_OPTIONS.find(f => f.value === frequency)?.label : 'Recurring'}
+                  {isRecurring && <Check className="size-3.5" weight="bold" />}
+                </button>
+              )}
             </div>
 
             {/* Amount */}
-            <div className="flex items-center justify-center gap-2 py-6">
+            <div className="flex items-center justify-center gap-1 py-6">
               <span className="font-heading text-2xl font-medium text-muted-foreground">
                 {getCurrency(couple?.currency_code ?? DEFAULT_CURRENCY_CODE).symbol}
               </span>
@@ -261,28 +270,21 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
                 🔁 {linkedTemplate ? `Recurring · ${FREQUENCY_OPTIONS.find(f => f.value === linkedTemplate.frequency)?.label}` : 'Part of a recurring series'}
                 {' — manage this from Upcoming on the Log page.'}
               </p>
-            ) : (
-              <div className="space-y-2">
-                <Chip pressed={isRecurring} onPressedChange={setIsRecurring}>
-                  🔁 Recurring
-                </Chip>
-                {isRecurring && (
-                  <div className="overflow-hidden rounded-lg border border-border">
-                    {FREQUENCY_OPTIONS.map(opt => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setFrequency(opt.value)}
-                        className="flex w-full items-center justify-between border-b border-border px-4 py-3.5 text-left text-sm font-medium text-foreground last:border-b-0"
-                      >
-                        {opt.label}
-                        {frequency === opt.value && <Check className="size-4" weight="bold" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
+            ) : isRecurring ? (
+              <div className="overflow-hidden rounded-lg border border-border">
+                {FREQUENCY_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFrequency(opt.value)}
+                    className="flex w-full items-center justify-between border-b border-border px-4 py-3.5 text-left text-sm font-medium text-foreground last:border-b-0"
+                  >
+                    {opt.label}
+                    {frequency === opt.value && <Check className="size-4" weight="bold" />}
+                  </button>
+                ))}
               </div>
-            )}
+            ) : null}
 
             {/* Category + Save */}
             <div className="flex items-center gap-2">
@@ -324,19 +326,28 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
           <SheetHeader>
             <SheetTitle>Category</SheetTitle>
           </SheetHeader>
-          <div className="flex flex-wrap gap-2 px-4 pb-4">
-            {categories.map(cat => (
-              <Chip
-                key={cat.id}
-                pressed={category === cat.name}
-                onPressedChange={() => {
-                  setCategory(cat.name)
-                  setCategoryPickerOpen(false)
-                }}
-              >
-                <span>{cat.icon}</span> {cat.name}
-              </Chip>
-            ))}
+          <div className="px-4 pb-4">
+            <div className="overflow-hidden rounded-lg border border-border">
+              {categories.map(cat => {
+                const selected = category === cat.name
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      setCategory(cat.name)
+                      setCategoryPickerOpen(false)
+                    }}
+                    className="flex w-full items-center justify-between border-b border-border px-4 py-3.5 text-left text-sm font-medium text-foreground last:border-b-0"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>{cat.icon}</span> {cat.name}
+                    </span>
+                    {selected && <Check className="size-4" weight="bold" />}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </SheetContent>
       </Sheet>
