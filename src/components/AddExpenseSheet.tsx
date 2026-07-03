@@ -29,7 +29,7 @@ interface Props {
 // — a bordered rectangle split in half, not the rounded Chip/pill style used
 // elsewhere, per design.md's "Date/Payer Segmented Row" pattern.
 const SEGMENT_CLASS =
-  'flex flex-1 items-center justify-between gap-1.5 px-4 py-3.5 text-left text-sm font-medium text-foreground outline-none transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50'
+  'flex items-center justify-between gap-1.5 px-4 py-3.5 text-left text-sm font-medium text-foreground outline-none transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50'
 
 function formatAmount(raw: string): string {
   if (!raw) return ''
@@ -165,7 +165,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
 
           <div className="space-y-4 px-4 pb-4">
             {/* Date + who paid, combined into one bordered rectangle */}
-            <div className="flex items-stretch overflow-hidden rounded-lg border border-border">
+            <div className="inline-flex items-stretch overflow-hidden rounded-lg border border-border">
               <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <button type="button" className={`${SEGMENT_CLASS} border-r border-border`}>
@@ -196,7 +196,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
             </div>
 
             {/* Amount */}
-            <div className="pb-1 text-center">
+            <div className="py-6 text-center">
               <input
                 type="text"
                 inputMode="decimal"
@@ -218,7 +218,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
               aria-label="Description"
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="h-12"
+              className="h-[72px]"
             />
 
             {/* Category + Save */}

@@ -326,20 +326,27 @@ drag-to-dismiss (see below) and tapping the overlay/pressing Escape are the
 only ways to close it — there's no dedicated close affordance, mirroring the
 Filter/Month drawers' full-bleed content. In place of the old header sits a
 **Date/Payer Segmented Row**: one bordered rectangle (`rounded-lg border
-border-border`, `overflow-hidden`) split into two equal `flex-1` segments by
-an internal `border-r` — left segment opens the date `Popover`/`Calendar`
-(trailing `CaretDown`), right segment toggles who paid on tap (trailing
-`CaretRight`, disabled with no partner). Neither segment uses `Chip` — chips
-read as filter/selection pills elsewhere in the app, and this row is a
-direct-action control, not a selection, so it gets the same bordered
-rectangle language as buttons instead. Below that: the amount, a plain
-`Input` for description (no `Label` above it — the placeholder carries the
-meaning, though an `aria-label="Description"` keeps it named for screen
-readers), then a final row pairing a `Button` (`variant="outline"`, icon +
-name + trailing `CaretRight`) that opens the category picker with the
-full-width primary Save `Button` — the category trigger used to be a `Chip`
-too, now it's a bordered `Button` so it visually reads as the same weight of
-control as "Add expense"/"Save changes" beside it, just secondary instead of
+border-border`, `overflow-hidden`) split into two segments by an internal
+`border-r` — left segment opens the date `Popover`/`Calendar` (trailing
+`CaretDown`), right segment toggles who paid on tap (trailing `CaretRight`,
+disabled with no partner). The container is `inline-flex` and the segments
+size to their own content (no `flex-1`) — the row is meant to read as a
+compact control sitting in the corner, not a full-width bar, matching the
+Filter/Month toolbar buttons' proportions rather than stretching edge to
+edge. Neither segment uses `Chip` — chips read as filter/selection pills
+elsewhere in the app, and this row is a direct-action control, not a
+selection, so it gets the same bordered rectangle language as buttons
+instead. Below that: the amount, given `py-6` (24px) of breathing room above
+and below so it doesn't feel squeezed between the segmented row and the
+description field; a plain `Input` for description at `h-[72px]` (taller
+than the default 48px input height, since it's the sheet's primary text
+field) with no `Label` above it — the placeholder carries the meaning,
+though an `aria-label="Description"` keeps it named for screen readers; then
+a final row pairing a `Button` (`variant="outline"`, icon + name + trailing
+`CaretRight`) that opens the category picker with the full-width primary
+Save `Button` — the category trigger used to be a `Chip` too, now it's a
+bordered `Button` so it visually reads as the same weight of control as
+"Add expense"/"Save changes" beside it, just secondary instead of
 primary. The "Split" feature (the old evenly-split-expense toggle, its
 `expenses.split` column, and the Balance screen that read it) has been
 removed entirely — not just hidden from the UI. There is no split state to
