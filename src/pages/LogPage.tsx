@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Plus, Receipt, SpinnerGap, CaretDown } from '@phosphor-icons/react'
+import { Plus, X, Receipt, SpinnerGap, CaretDown } from '@phosphor-icons/react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useExpenses } from '../hooks/useExpenses'
@@ -28,6 +28,12 @@ import {
 
 const TOAST_COPY = { added: 'Expense added', updated: 'Expense updated', deleted: 'Expense deleted' } as const
 
+// The bottom toolbar floats with no background behind it, so the default
+// variant's opacity-based hover (`hover:bg-primary/80`) lets the page show
+// through and reads as washed-out/transparent. `brightness` darkens the
+// already-opaque button instead of blending with whatever's behind it.
+const TOOLBAR_SOLID_HOVER = 'hover:bg-primary hover:brightness-90'
+
 export function LogPage() {
   const { user, couple } = useAuth()
   const { expenses, loading, refetch } = useExpenses(couple?.couple_id)
@@ -44,6 +50,10 @@ export function LogPage() {
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [openSwipeRowId, setOpenSwipeRowId] = useState<string | null>(null)
+  const [editMode, setEditMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   function handleSaved(action: 'added' | 'updated' | 'deleted') {
     refetch()
@@ -92,6 +102,33 @@ export function LogPage() {
     setDeleting(false)
     setDeletingExpense(null)
     handleSaved('deleted')
+  }
+
+  function enterEditMode() {
+    setEditMode(true)
+    setOpenSwipeRowId(null)
+  }
+
+  function exitEditMode() {
+    setEditMode(false)
+    setSelectedIds([])
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => (prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]))
+  }
+
+  async function handleConfirmBulkDelete() {
+    if (selectedIds.length === 0) return
+    setBulkDeleting(true)
+    await supabase.from('expenses').delete().in('id', selectedIds)
+    setBulkDeleting(false)
+    setBulkDeleteOpen(false)
+    const count = selectedIds.length
+    exitEditMode()
+    refetch()
+    refetchRecurring()
+    toast(count === 1 ? 'Expense deleted' : `${count} expenses deleted`)
   }
 
   const catIcons = Object.fromEntries(categories.map(c => [c.name, c.icon]))
@@ -166,6 +203,9 @@ export function LogPage() {
                         onEdit={() => openEdit(expense)}
                         onDeleteRequest={() => { setDeletingExpense(expense); setOpenSwipeRowId(null) }}
                         showTopBorder={i === 0}
+                        editMode={editMode}
+                        selected={selectedIds.includes(expense.id)}
+                        onToggleSelect={() => toggleSelect(expense.id)}
                       />
                     )
                   })}
@@ -181,26 +221,55 @@ export function LogPage() {
         className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between px-5 pt-3"
         style={{ paddingBottom: 'calc(16px + var(--safe-bottom))' }}
       >
-        <Button onClick={openAdd} size="icon" aria-label="Add expense">
-          <Plus className="size-5" weight="bold" />
-        </Button>
-
-        <div className="flex items-center gap-2">
+        {editMode ? (
           <Button
-            onClick={() => { setFilterDrawerOpen(true); setOpenSwipeRowId(null) }}
-            className="gap-1.5"
+            onClick={exitEditMode}
+            size="icon"
+            aria-label="Exit edit mode"
+            className={TOOLBAR_SOLID_HOVER}
           >
-            {hasActiveFilters ? `${activeFilterCount} · Filter` : 'Filter'}
-            <CaretDown className="size-3.5" />
+            <X className="size-5" weight="bold" />
           </Button>
-          {availableMonths.length > 0 && selectedMonth && (
-            <MonthDrawer
-              months={availableMonths}
-              selectedMonth={selectedMonth}
-              onSelect={m => { setSelectedMonth(m); setOpenSwipeRowId(null) }}
-            />
-          )}
-        </div>
+        ) : (
+          <Button
+            onClick={openAdd}
+            size="icon"
+            aria-label="Add expense"
+            className={TOOLBAR_SOLID_HOVER}
+          >
+            <Plus className="size-5" weight="bold" />
+          </Button>
+        )}
+
+        {editMode ? (
+          <Button
+            variant="destructive"
+            onClick={() => setBulkDeleteOpen(true)}
+            disabled={selectedIds.length === 0}
+            className="bg-destructive text-white hover:bg-destructive hover:brightness-90 dark:bg-destructive dark:hover:bg-destructive disabled:opacity-100 disabled:bg-destructive disabled:saturate-50 disabled:brightness-75 disabled:text-white/70"
+          >
+            {selectedIds.length > 0 ? `Delete (${selectedIds.length})` : 'Delete'}
+          </Button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button onClick={enterEditMode} className={TOOLBAR_SOLID_HOVER}>Edit</Button>
+            <Button
+              onClick={() => { setFilterDrawerOpen(true); setOpenSwipeRowId(null) }}
+              className={`gap-1.5 ${TOOLBAR_SOLID_HOVER}`}
+            >
+              {hasActiveFilters ? `${activeFilterCount} · Filter` : 'Filter'}
+              <CaretDown className="size-3.5" />
+            </Button>
+            {availableMonths.length > 0 && selectedMonth && (
+              <MonthDrawer
+                months={availableMonths}
+                selectedMonth={selectedMonth}
+                onSelect={m => { setSelectedMonth(m); setOpenSwipeRowId(null) }}
+                triggerClassName={TOOLBAR_SOLID_HOVER}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       <AddExpenseSheet
@@ -244,6 +313,25 @@ export function LogPage() {
             </DialogClose>
             <Button variant="destructive" onClick={handleConfirmDelete} disabled={deleting}>
               {deleting ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkDeleteOpen} onOpenChange={open => !open && setBulkDeleteOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {selectedIds.length} expenses?</DialogTitle>
+            <DialogDescription>
+              This can't be undone, and removes them from your partner's log too.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="secondary">Cancel</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={handleConfirmBulkDelete} disabled={bulkDeleting}>
+              {bulkDeleting ? 'Deleting…' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>

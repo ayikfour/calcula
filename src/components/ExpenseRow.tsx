@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import { TrashSimple } from '@phosphor-icons/react'
+import { Checkbox } from '@/components/ui/checkbox'
 import { formatCurrency } from '../lib/format'
 import type { Expense } from '../types'
 
@@ -16,6 +17,9 @@ interface Props {
   onEdit: () => void
   onDeleteRequest: () => void
   showTopBorder?: boolean
+  editMode?: boolean
+  selected?: boolean
+  onToggleSelect?: () => void
 }
 
 type DragState = {
@@ -35,6 +39,9 @@ export function ExpenseRow({
   onEdit,
   onDeleteRequest,
   showTopBorder,
+  editMode = false,
+  selected = false,
+  onToggleSelect,
 }: Props) {
   const [dragX, setDragX] = useState(isOpen ? -SWIPE_WIDTH : 0)
   const [isDragging, setIsDragging] = useState(false)
@@ -84,6 +91,45 @@ export function ExpenseRow({
     const shouldOpen = dragX < -SWIPE_WIDTH / 2
     setDragX(shouldOpen ? -SWIPE_WIDTH : 0)
     onOpenChange(shouldOpen)
+  }
+
+  if (editMode) {
+    return (
+      <div
+        className="relative border-b border-border"
+        style={showTopBorder ? { borderTop: '1px solid var(--border)' } : undefined}
+      >
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={onToggleSelect}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleSelect?.() } }}
+          className="flex w-full items-center gap-3 bg-background px-5 py-3.5 text-left"
+        >
+          <Checkbox checked={selected} className="pointer-events-none" tabIndex={-1} />
+
+          {/* Category icon */}
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
+            {categoryIcon}
+          </div>
+
+          {/* Text */}
+          <div className="min-w-0 flex-1">
+            <p className="mb-0.5 truncate text-base font-medium text-foreground">
+              {expense.category}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {expense.description ? `${expense.description} · ${payerLabel}` : payerLabel}
+            </p>
+          </div>
+
+          {/* Amount */}
+          <span className="font-heading shrink-0 text-base font-medium text-foreground">
+            {formatCurrency(expense.amount, currencyCode)}
+          </span>
+        </div>
+      </div>
+    )
   }
 
   return (

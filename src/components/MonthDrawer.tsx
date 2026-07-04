@@ -7,6 +7,7 @@ interface Props {
   months: string[] // 'YYYY-MM', most recent first
   selectedMonth: string
   onSelect: (month: string) => void
+  triggerClassName?: string
 }
 
 function monthLabel(month: string, multiYear: boolean): string {
@@ -16,7 +17,7 @@ function monthLabel(month: string, multiYear: boolean): string {
   return multiYear ? `${label} ${year}` : label
 }
 
-export function MonthDrawer({ months, selectedMonth, onSelect }: Props) {
+export function MonthDrawer({ months, selectedMonth, onSelect, triggerClassName }: Props) {
   const [open, setOpen] = useState(false)
   const multiYear = new Set(months.map(m => m.slice(0, 4))).size > 1
 
@@ -24,7 +25,7 @@ export function MonthDrawer({ months, selectedMonth, onSelect }: Props) {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} className="gap-1.5">
+      <Button onClick={() => setOpen(true)} className={`gap-1.5 ${triggerClassName ?? ''}`}>
         {monthLabel(selectedMonth, multiYear)}
         <CaretDown className="size-3.5" />
       </Button>
