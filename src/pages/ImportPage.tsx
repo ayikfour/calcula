@@ -10,11 +10,12 @@ import { useAuth } from '../hooks/useAuth'
 import { useCategories } from '../hooks/useCategories'
 import { useCoupleMembers } from '../hooks/useCoupleMembers'
 import { getCurrency, parseCurrencyAmount } from '../lib/currencies'
-import { formatCurrency } from '../lib/format'
+import { formatCurrency, formatDateLabel } from '../lib/format'
 import { toISODateLocal } from '../lib/dates'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const REQUIRED_HEADERS = ['category', 'amount', 'paid by', 'description', 'date']
 const CHUNK_SIZE = 500
@@ -40,6 +41,20 @@ interface ParsedRow {
 }
 
 type Step = 'upload' | 'configure' | 'preview' | 'done'
+
+// The sheet's category/payer dropdowns render as an emoji + name (e.g.
+// "🍖 Food", "🥷 Blanche"), which the CSV export preserves literally.
+// Strip everything before the first Latin letter so matching/display works
+// against plain category and display names.
+function cleanName(raw: string): string {
+  const match = raw.match(/[A-Za-z].*/)
+  return (match ? match[0] : raw).trim()
+}
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+function isIsoDate(value: string): boolean {
+  return ISO_DATE_RE.test(value)
+}
 
 // Sheet dates have no year ("Thursday, June 25") — the "date" candidate
 // pulls the year from the year picked in the configure step. The others
@@ -76,7 +91,7 @@ export function ImportPage() {
   const [imported, setImported] = useState(0)
 
   const distinctPayers = useMemo(
-    () => Array.from(new Set(rawRows.map(r => r['paid by']?.trim()).filter(Boolean))),
+    () => Array.from(new Set(rawRows.map(r => cleanName(r['paid by'] ?? '')).filter(Boolean))),
     [rawRows]
   )
   const tooManyPayers = distinctPayers.length > 2
@@ -117,7 +132,7 @@ export function ImportPage() {
       : undefined
 
     const built: ParsedRow[] = rawRows.map(raw => {
-      const payerRaw = raw['paid by']?.trim() ?? ''
+      const payerRaw = cleanName(raw['paid by'] ?? '')
       let paid_by: string | null = null
       let paid_by_label: string | null = null
       if (payerRaw.toLowerCase() === selfName.toLowerCase()) {
@@ -130,7 +145,7 @@ export function ImportPage() {
 
       const amount = parseCurrencyAmount(raw.amount ?? '', currency)
       const categoryMatch = categories.find(
-        c => c.name.toLowerCase() === (raw.category ?? '').trim().toLowerCase()
+        c => c.name.toLowerCase() === cleanName(raw.category ?? '').toLowerCase()
       )
       const expense_date = parseImportDate(raw.date ?? '', year)
 
@@ -169,8 +184,28 @@ export function ImportPage() {
     setRows(prev => prev.map((r, i) => (i === index ? { ...r, manuallyExcluded: !r.manuallyExcluded } : r)))
   }
 
+  function setIncluded(indices: number[], included: boolean) {
+    const set = new Set(indices)
+    setRows(prev => prev.map((r, i) => (set.has(i) ? { ...r, manuallyExcluded: !included } : r)))
+  }
+
   const readyRows = rows.filter(r => r.errors.length === 0 && !r.manuallyExcluded)
   const readyTotal = readyRows.reduce((s, r) => s + (r.amount ?? 0), 0)
+
+  // Grouped the same way the Log screen groups its list — one header per
+  // date with a running total, rows underneath — so reviewing an import
+  // feels like reviewing the log it's about to join. Rows with a date that
+  // failed to parse are bucketed under their raw literal text instead.
+  const groupedRows = useMemo(() => {
+    const map = new Map<string, { row: ParsedRow; index: number }[]>()
+    rows.forEach((row, index) => {
+      const key = row.expense_date ?? row.raw.date
+      const list = map.get(key) ?? []
+      list.push({ row, index })
+      map.set(key, list)
+    })
+    return Array.from(map.entries())
+  }, [rows])
 
   async function handleCommit() {
     if (!couple || readyRows.length === 0) return
@@ -294,61 +329,95 @@ export function ImportPage() {
             </p>
           </Card>
 
-          <div className="space-y-2">
-            {rows.map((row, i) => {
-              const excluded = row.errors.length > 0 || row.manuallyExcluded
-              const payerLabel =
-                row.paid_by === user?.id ? 'You' : row.paid_by ? 'Partner' : (row.paid_by_label ?? 'Partner')
-              const categoryMeta = categories.find(c => c.name === row.category)
+          <div>
+            {groupedRows.map(([dateKey, items]) => {
+              const dayTotal = items.reduce((s, { row }) => s + (row.amount ?? 0), 0)
+              const label = isIsoDate(dateKey) ? formatDateLabel(dateKey) : dateKey
+              const includable = items.filter(({ row }) => row.errors.length === 0)
+              const allSelected = includable.length > 0 && includable.every(({ row }) => !row.manuallyExcluded)
+              const noneSelected = includable.every(({ row }) => row.manuallyExcluded)
 
               return (
-                <div
-                  key={i}
-                  className={`rounded-lg border p-3 text-sm ${excluded ? 'border-border/50 opacity-60' : 'border-border'}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-foreground">
-                      {row.expense_date ?? row.raw.date} · {row.description || row.raw.category}
-                    </span>
-                    <span className="font-heading tabular-nums text-foreground">
-                      {row.amount ? formatCurrency(row.amount, couple?.currency_code) : row.raw.amount}
-                    </span>
-                  </div>
-
-                  <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span>{payerLabel}</span>
-                    {row.category ? (
-                      <span>
-                        {categoryMeta?.icon} {row.category}
+                <div key={dateKey} className="mb-6">
+                  <div className="flex items-baseline justify-between pr-4 pb-1.5">
+                    <div className="flex items-center gap-3">
+                      {includable.length > 0 && (
+                        <Checkbox
+                          checked={allSelected ? true : noneSelected ? false : 'indeterminate'}
+                          onCheckedChange={() => setIncluded(includable.map(({ index }) => index), !allSelected)}
+                        />
+                      )}
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        {label}
                       </span>
-                    ) : (
-                      <select
-                        value=""
-                        onChange={e => fixRowCategory(i, e.target.value)}
-                        className="rounded border border-border bg-input/30 px-1.5 py-0.5 text-xs text-foreground"
-                      >
-                        <option value="" disabled>
-                          Fix category…
-                        </option>
-                        {categories.map(c => (
-                          <option key={c.id} value={c.name}>
-                            {c.icon} {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                    </div>
+                    <span className="font-heading text-xs text-muted-foreground">
+                      {formatCurrency(dayTotal, couple?.currency_code)}
+                    </span>
                   </div>
 
-                  {row.errors.length > 0 ? (
-                    <p className="mt-1.5 text-xs text-destructive">{row.errors.join(', ')}</p>
-                  ) : (
-                    <button
-                      onClick={() => toggleManualExclude(i)}
-                      className="mt-1.5 text-xs font-medium text-muted-foreground underline"
-                    >
-                      {row.manuallyExcluded ? 'Include' : 'Exclude'}
-                    </button>
-                  )}
+                  <div className="space-y-2">
+                    {items.map(({ row, index }) => {
+                      const excluded = row.errors.length > 0 || row.manuallyExcluded
+                      const payerLabel =
+                        row.paid_by === user?.id ? 'You' : row.paid_by ? 'Partner' : (row.paid_by_label ?? 'Partner')
+                      const categoryMeta = categories.find(c => c.name === row.category)
+
+                      return (
+                        <div key={index} className="flex items-center gap-3">
+                          <Checkbox
+                            className="shrink-0"
+                            checked={!excluded}
+                            disabled={row.errors.length > 0}
+                            onCheckedChange={() => toggleManualExclude(index)}
+                          />
+
+                          <div
+                            onClick={() => { if (row.errors.length === 0) toggleManualExclude(index) }}
+                            className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-border px-4 py-3 ${row.errors.length === 0 ? 'cursor-pointer' : ''} ${excluded ? 'opacity-50' : ''}`}
+                          >
+                            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
+                              {categoryMeta?.icon ?? '❓'}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              {row.category ? (
+                                <p className="mb-0.5 truncate text-base font-medium text-foreground">
+                                  {row.category}
+                                </p>
+                              ) : (
+                                <select
+                                  value=""
+                                  onClick={e => e.stopPropagation()}
+                                  onChange={e => fixRowCategory(index, e.target.value)}
+                                  className="mb-0.5 rounded border border-border bg-input/30 px-1.5 py-0.5 text-xs text-foreground"
+                                >
+                                  <option value="" disabled>
+                                    Fix category…
+                                  </option>
+                                  {categories.map(c => (
+                                    <option key={c.id} value={c.name}>
+                                      {c.icon} {c.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                              <p className="truncate text-xs text-muted-foreground">
+                                {row.description ? `${row.description} · ${payerLabel}` : payerLabel}
+                              </p>
+                              {row.errors.length > 0 && (
+                                <p className="truncate text-xs text-destructive">{row.errors.join(', ')}</p>
+                              )}
+                            </div>
+
+                            <span className="font-heading shrink-0 text-base font-medium text-foreground">
+                              {row.amount ? formatCurrency(row.amount, couple?.currency_code) : row.raw.amount}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )
             })}
