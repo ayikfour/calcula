@@ -184,11 +184,6 @@ export function ImportPage() {
     setRows(prev => prev.map((r, i) => (i === index ? { ...r, manuallyExcluded: !r.manuallyExcluded } : r)))
   }
 
-  function setIncluded(indices: number[], included: boolean) {
-    const set = new Set(indices)
-    setRows(prev => prev.map((r, i) => (set.has(i) ? { ...r, manuallyExcluded: !included } : r)))
-  }
-
   const readyRows = rows.filter(r => r.errors.length === 0 && !r.manuallyExcluded)
   const readyTotal = readyRows.reduce((s, r) => s + (r.amount ?? 0), 0)
 
@@ -333,87 +328,80 @@ export function ImportPage() {
             {groupedRows.map(([dateKey, items]) => {
               const dayTotal = items.reduce((s, { row }) => s + (row.amount ?? 0), 0)
               const label = isIsoDate(dateKey) ? formatDateLabel(dateKey) : dateKey
-              const includable = items.filter(({ row }) => row.errors.length === 0)
-              const allSelected = includable.length > 0 && includable.every(({ row }) => !row.manuallyExcluded)
-              const noneSelected = includable.every(({ row }) => row.manuallyExcluded)
 
               return (
-                <div key={dateKey} className="mb-6">
-                  <div className="flex items-baseline justify-between pr-4 pb-1.5">
-                    <div className="flex items-center gap-3">
-                      {includable.length > 0 && (
-                        <Checkbox
-                          checked={allSelected ? true : noneSelected ? false : 'indeterminate'}
-                          onCheckedChange={() => setIncluded(includable.map(({ index }) => index), !allSelected)}
-                        />
-                      )}
-                      <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                        {label}
-                      </span>
-                    </div>
+                <div key={dateKey}>
+                  <div className="flex items-baseline justify-between px-5 pt-3 pb-1.5">
+                    <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      {label}
+                    </span>
                     <span className="font-heading text-xs text-muted-foreground">
                       {formatCurrency(dayTotal, couple?.currency_code)}
                     </span>
                   </div>
 
-                  <div className="space-y-2">
-                    {items.map(({ row, index }) => {
+                  <div className="mb-1">
+                    {items.map(({ row, index }, i) => {
                       const excluded = row.errors.length > 0 || row.manuallyExcluded
                       const payerLabel =
                         row.paid_by === user?.id ? 'You' : row.paid_by ? 'Partner' : (row.paid_by_label ?? 'Partner')
                       const categoryMeta = categories.find(c => c.name === row.category)
+                      const includable = row.errors.length === 0
 
                       return (
-                        <div key={index} className="flex items-center gap-3">
-                          <Checkbox
-                            className="shrink-0"
-                            checked={!excluded}
-                            disabled={row.errors.length > 0}
-                            onCheckedChange={() => toggleManualExclude(index)}
-                          />
+                        <div
+                          key={index}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => { if (includable) toggleManualExclude(index) }}
+                          onKeyDown={e => {
+                            if (includable && (e.key === 'Enter' || e.key === ' ')) {
+                              e.preventDefault()
+                              toggleManualExclude(index)
+                            }
+                          }}
+                          className={`flex w-full items-center gap-3 border-b border-border bg-background px-5 py-3.5 text-left ${includable ? 'cursor-pointer' : ''} ${excluded ? 'opacity-50' : ''}`}
+                          style={i === 0 ? { borderTop: '1px solid var(--border)' } : undefined}
+                        >
+                          <Checkbox checked={!excluded} className="pointer-events-none shrink-0" tabIndex={-1} />
 
-                          <div
-                            onClick={() => { if (row.errors.length === 0) toggleManualExclude(index) }}
-                            className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-border px-4 py-3 ${row.errors.length === 0 ? 'cursor-pointer' : ''} ${excluded ? 'opacity-50' : ''}`}
-                          >
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
-                              {categoryMeta?.icon ?? '❓'}
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              {row.category ? (
-                                <p className="mb-0.5 truncate text-base font-medium text-foreground">
-                                  {row.category}
-                                </p>
-                              ) : (
-                                <select
-                                  value=""
-                                  onClick={e => e.stopPropagation()}
-                                  onChange={e => fixRowCategory(index, e.target.value)}
-                                  className="mb-0.5 rounded border border-border bg-input/30 px-1.5 py-0.5 text-xs text-foreground"
-                                >
-                                  <option value="" disabled>
-                                    Fix category…
-                                  </option>
-                                  {categories.map(c => (
-                                    <option key={c.id} value={c.name}>
-                                      {c.icon} {c.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              )}
-                              <p className="truncate text-xs text-muted-foreground">
-                                {row.description ? `${row.description} · ${payerLabel}` : payerLabel}
-                              </p>
-                              {row.errors.length > 0 && (
-                                <p className="truncate text-xs text-destructive">{row.errors.join(', ')}</p>
-                              )}
-                            </div>
-
-                            <span className="font-heading shrink-0 text-base font-medium text-foreground">
-                              {row.amount ? formatCurrency(row.amount, couple?.currency_code) : row.raw.amount}
-                            </span>
+                          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-lg">
+                            {categoryMeta?.icon ?? '❓'}
                           </div>
+
+                          <div className="min-w-0 flex-1">
+                            {row.category ? (
+                              <p className="mb-0.5 truncate text-base font-medium text-foreground">
+                                {row.category}
+                              </p>
+                            ) : (
+                              <select
+                                value=""
+                                onClick={e => e.stopPropagation()}
+                                onChange={e => fixRowCategory(index, e.target.value)}
+                                className="mb-0.5 rounded border border-border bg-input/30 px-1.5 py-0.5 text-xs text-foreground"
+                              >
+                                <option value="" disabled>
+                                  Fix category…
+                                </option>
+                                {categories.map(c => (
+                                  <option key={c.id} value={c.name}>
+                                    {c.icon} {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                            <p className="truncate text-xs text-muted-foreground">
+                              {row.description ? `${row.description} · ${payerLabel}` : payerLabel}
+                            </p>
+                            {row.errors.length > 0 && (
+                              <p className="truncate text-xs text-destructive">{row.errors.join(', ')}</p>
+                            )}
+                          </div>
+
+                          <span className="font-heading shrink-0 text-base font-medium text-foreground">
+                            {row.amount ? formatCurrency(row.amount, couple?.currency_code) : row.raw.amount}
+                          </span>
                         </div>
                       )
                     })}
