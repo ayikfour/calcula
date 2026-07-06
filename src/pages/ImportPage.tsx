@@ -38,6 +38,7 @@ interface ParsedRow {
   description: string
   errors: string[]
   manuallyExcluded: boolean
+  isDuplicate: boolean
 }
 
 type Step = 'upload' | 'configure' | 'preview' | 'done'
@@ -74,6 +75,28 @@ function parseImportDate(raw: string, year: number): string | null {
   return null
 }
 
+// A row "looks like" a duplicate if every user-visible field matches —
+// used both against what's already in the database and against earlier
+// rows in the same file, so re-importing a file (or a file with repeated
+// rows) doesn't silently double expenses.
+function dupKey(row: {
+  expense_date: string
+  amount: number
+  category: string
+  description: string
+  paid_by: string | null
+  paid_by_label: string | null
+}): string {
+  const payerKey = row.paid_by ?? `label:${(row.paid_by_label ?? '').toLowerCase()}`
+  return [
+    row.expense_date,
+    row.amount.toFixed(2),
+    row.category.toLowerCase(),
+    row.description.trim().toLowerCase(),
+    payerKey,
+  ].join('|')
+}
+
 export function ImportPage() {
   const navigate = useNavigate()
   const { user, couple } = useAuth()
@@ -87,6 +110,7 @@ export function ImportPage() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [selfName, setSelfName] = useState('')
   const [rows, setRows] = useState<ParsedRow[]>([])
+  const [checking, setChecking] = useState(false)
   const [committing, setCommitting] = useState(false)
   const [imported, setImported] = useState(0)
 
@@ -123,8 +147,9 @@ export function ImportPage() {
     })
   }
 
-  function handleConfigure() {
-    if (!selfName || tooManyPayers) return
+  async function handleConfigure() {
+    if (!selfName || tooManyPayers || !couple) return
+    setChecking(true)
 
     const otherRaw = distinctPayers.find(p => p.toLowerCase() !== selfName.toLowerCase()) ?? null
     const otherMember = otherRaw
@@ -165,10 +190,57 @@ export function ImportPage() {
         description: (raw.description ?? '').trim(),
         errors,
         manuallyExcluded: false,
+        isDuplicate: false,
       }
     })
 
+    // Seed the dedup set with expenses already in the database for the
+    // dates this file touches, then walk the file in order so repeated
+    // rows within the same file also get flagged (each row's key is added
+    // right after it's checked).
+    const distinctDates = Array.from(
+      new Set(built.filter(r => r.errors.length === 0).map(r => r.expense_date!))
+    )
+    const seenKeys = new Set<string>()
+    if (distinctDates.length > 0) {
+      const { data: existing } = await supabase
+        .from('expenses')
+        .select('expense_date, amount, category, description, paid_by, paid_by_label')
+        .eq('couple_id', couple.couple_id)
+        .in('expense_date', distinctDates)
+      for (const row of existing ?? []) {
+        seenKeys.add(
+          dupKey({
+            expense_date: row.expense_date,
+            amount: Number(row.amount),
+            category: row.category,
+            description: row.description,
+            paid_by: row.paid_by,
+            paid_by_label: row.paid_by_label,
+          })
+        )
+      }
+    }
+
+    for (const row of built) {
+      if (row.errors.length > 0) continue
+      const key = dupKey({
+        expense_date: row.expense_date!,
+        amount: row.amount!,
+        category: row.category!,
+        description: row.description,
+        paid_by: row.paid_by,
+        paid_by_label: row.paid_by_label,
+      })
+      if (seenKeys.has(key)) {
+        row.isDuplicate = true
+        row.manuallyExcluded = true
+      }
+      seenKeys.add(key)
+    }
+
     setRows(built)
+    setChecking(false)
     setStep('preview')
   }
 
@@ -301,8 +373,8 @@ export function ImportPage() {
             )}
           </div>
 
-          <Button onClick={handleConfigure} disabled={!selfName || tooManyPayers} className="w-full">
-            Continue
+          <Button onClick={handleConfigure} disabled={!selfName || tooManyPayers || checking} className="w-full">
+            {checking ? 'Checking for duplicates…' : 'Continue'}
           </Button>
         </Card>
       )}
@@ -320,7 +392,7 @@ export function ImportPage() {
               {formatCurrency(readyTotal, couple?.currency_code)}
             </p>
             <p className="text-xs text-muted-foreground">
-              Re-importing the same file will create duplicate expenses — only import each file once.
+              Possible duplicates are unchecked by default — review before importing.
             </p>
           </Card>
 
@@ -396,6 +468,11 @@ export function ImportPage() {
                             </p>
                             {row.errors.length > 0 && (
                               <p className="truncate text-xs text-destructive">{row.errors.join(', ')}</p>
+                            )}
+                            {row.errors.length === 0 && row.isDuplicate && (
+                              <p className="truncate text-xs text-muted-foreground">
+                                Possible duplicate — already in your log
+                              </p>
                             )}
                           </div>
 
