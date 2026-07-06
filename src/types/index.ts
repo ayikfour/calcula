@@ -39,3 +39,10 @@ export interface CoupleMember {
   user_id: string
   display_name: string
 }
+
+export interface Budget {
+  couple_id: string
+  user_id: string
+  monthly_amount: number
+  updated_at: string
+}

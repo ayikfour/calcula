@@ -532,6 +532,13 @@ Wraps the standard Form Field/Input pattern above (same 48px height, `#1d1d1d` b
 
 Glass surface (`--color-char` background, 1px hairline border, `--radius-card`), padding 20px. Header row: title (DM Sans 15px weight 500, `--color-bone`) with an optional right-aligned stat or delta badge. Chart fills the remaining width, fixed height (160–220px depending on chart type) so cards stack predictably. Axis labels and gridlines stay muted (`--color-graphite`/`--color-fog`, never full white) so the data itself — not chrome — carries the color. Tooltips reuse the glass treatment (blurred dark pill, hairline border).
 
+### Budget Card
+**Role:** First card on the Dashboard/Stats screen — per-person monthly budget vs. spend for the current calendar month
+
+Same `Card` container as the other Dashboard cards (`p-5`). Header row: title ("Budget — this month") left, a right-aligned remaining/over-budget badge (`text-xs font-medium`, `--color-success` when under budget, `--color-danger` when over — the same binary tones as the MoM delta indicator, no third/warning color). Below that, a progress bar reusing the "Who Paid" split bar's mechanics (`h-2 rounded-full bg-muted` track, a single filled segment sized to `min(spent/budget, 100%)`) — filled segment colored `--color-success`/`--color-danger` to match the badge, rather than the neutral `bg-foreground` the Who Paid bar uses, since this bar communicates good/bad rather than a neutral split. A three-column stat row (`grid-cols-3`, 12px labels + Geist tabular-nums values) shows Remaining · Days left · Daily pace (the budget-safe amount left to spend per remaining day; renders `—` once over budget or on the month's last day, rather than a misleading number). An optional single line below projects month-end total at the current daily pace (only once `dayOfMonth > 2`, to avoid a wild projection from a day or two of data), colored `--color-danger` if the projection exceeds the budget. A hairline-divided footer (`border-t border-border pt-3`) lists each partner's name with `spent / budget` as plain text, no per-person bar — the shared bar above already carries the couple-level visual, individual rows just need the numbers.
+
+**Empty state:** if neither partner has set a budget yet (`budgetTotal === 0`), the card collapses to a single sentence ("Set a monthly budget in Settings to track it here") plus a text link to `/settings` — never a zeroed-out bar or `Rp 0 left`, which would read as an actual budget of zero rather than "not set up yet."
+
 ### Category Color Palette
 **Role:** Distinguishing categories in the Dashboard's category breakdown donut — the only place beyond Success/Danger where multiple chromatic colors appear together
 

@@ -1,8 +1,11 @@
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { getDaysInMonth } from 'date-fns'
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, PieChart, Pie, Cell } from 'recharts'
 import { useAuth } from '../hooks/useAuth'
 import { useExpenses } from '../hooks/useExpenses'
 import { useCoupleMembers } from '../hooks/useCoupleMembers'
+import { useBudgets } from '../hooks/useBudgets'
 import { formatCurrency } from '../lib/format'
 import { DEFAULT_CURRENCY_CODE } from '../lib/currencies'
 import { categoryColor } from '../lib/categoryColors'
@@ -30,6 +33,7 @@ export function DashboardPage() {
   const { user, couple } = useAuth()
   const { expenses } = useExpenses(couple?.couple_id)
   const members = useCoupleMembers(couple?.couple_id)
+  const { budgets } = useBudgets(couple?.couple_id)
 
   const now = useMemo(() => new Date(), [])
 
@@ -85,8 +89,104 @@ export function DashboardPage() {
   const youPct = splitTotal > 0 ? (youTotal / splitTotal) * 100 : 50
   const currencyCode = couple?.currency_code ?? DEFAULT_CURRENCY_CODE
 
+  const youBudget = budgets.find(b => b.user_id === user?.id)?.monthly_amount ?? 0
+  const partnerBudget = partner ? (budgets.find(b => b.user_id === partner.user_id)?.monthly_amount ?? 0) : 0
+  const budgetTotal = youBudget + partnerBudget
+
+  const daysInMonth = getDaysInMonth(now)
+  const dayOfMonth = now.getDate()
+  const daysLeft = daysInMonth - dayOfMonth
+  const avgDailySpend = monthlyTotal / dayOfMonth
+  const projectedTotal = avgDailySpend * daysInMonth
+  const remaining = budgetTotal - monthlyTotal
+  const dailyPace = daysLeft > 0 ? remaining / daysLeft : null
+  const budgetUsedPct = budgetTotal > 0 ? Math.min((monthlyTotal / budgetTotal) * 100, 100) : 0
+  const overBudget = remaining < 0
+
   return (
     <div className="flex flex-col gap-4 px-5 pt-2 pb-6">
+      {/* Budget */}
+      {budgetTotal === 0 ? (
+        <Card className="p-5">
+          <p className="text-sm font-medium text-foreground">Budget</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Set a monthly budget in Settings to track it here.
+          </p>
+          <Link
+            to="/settings"
+            className="mt-3 inline-flex items-center text-sm font-medium text-foreground underline underline-offset-2"
+          >
+            Go to Settings
+          </Link>
+        </Card>
+      ) : (
+        <Card className="p-5">
+          <div className="flex items-start justify-between">
+            <p className="text-sm font-medium text-foreground">Budget — this month</p>
+            <span
+              className="text-xs font-medium"
+              style={{ color: overBudget ? 'var(--color-danger)' : 'var(--color-success)' }}
+            >
+              {overBudget
+                ? `Over by ${formatCurrency(Math.abs(remaining), currencyCode)}`
+                : `${formatCurrency(remaining, currencyCode)} left`}
+            </span>
+          </div>
+
+          <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-muted">
+            <div
+              style={{
+                width: `${budgetUsedPct}%`,
+                background: overBudget ? 'var(--color-danger)' : 'var(--color-success)',
+              }}
+            />
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+            <div>
+              <p className="text-muted-foreground">Remaining</p>
+              <p className="mt-0.5 font-heading text-foreground">
+                {formatCurrency(Math.max(remaining, 0), currencyCode)}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Days left</p>
+              <p className="mt-0.5 font-heading text-foreground">{daysLeft}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Daily pace</p>
+              <p className="mt-0.5 font-heading text-foreground">
+                {overBudget || dailyPace === null ? '—' : formatCurrency(dailyPace, currencyCode)}
+              </p>
+            </div>
+          </div>
+
+          {dayOfMonth > 2 && (
+            <p
+              className="mt-3 text-xs"
+              style={{ color: projectedTotal > budgetTotal ? 'var(--color-danger)' : 'var(--muted-foreground)' }}
+            >
+              On track to spend {formatCurrency(projectedTotal, currencyCode)} by month end
+            </p>
+          )}
+
+          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium text-foreground">You</span>
+              <span className="text-muted-foreground">
+                {formatCurrency(youTotal, currencyCode)} / {formatCurrency(youBudget, currencyCode)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium text-foreground">{partner?.display_name ?? 'Partner'}</span>
+              <span className="text-muted-foreground">
+                {formatCurrency(partnerTotal, currencyCode)} / {formatCurrency(partnerBudget, currencyCode)}
+              </span>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Monthly total */}
       <Card className="p-5">
         <div className="flex items-start justify-between">
