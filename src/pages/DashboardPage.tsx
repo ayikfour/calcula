@@ -11,6 +11,7 @@ import { DEFAULT_CURRENCY_CODE } from '../lib/currencies'
 import { categoryColor } from '../lib/categoryColors'
 import { Card } from '@/components/ui/card'
 import { BudgetProgressBar } from '@/components/BudgetProgressBar'
+import { AnimatedAmount } from '@/components/AnimatedAmount'
 
 function dateKey(d: Date) {
   return d.toISOString().split('T')[0]
@@ -85,7 +86,7 @@ export function DashboardPage() {
               This month
             </p>
             <p className="font-heading text-3xl font-medium text-foreground">
-              {formatCurrency(monthlyTotal, currencyCode)}
+              <AnimatedAmount amount={monthlyTotal} currencyCode={currencyCode} />
             </p>
           </div>
           {momPercent !== null && (
@@ -122,8 +123,8 @@ export function DashboardPage() {
                   style={{ color: overBudget ? 'var(--color-danger)' : 'var(--color-success)' }}
                 >
                   {overBudget
-                    ? `Over by ${formatCurrency(Math.abs(remaining), currencyCode)}`
-                    : `${formatCurrency(remaining, currencyCode)} left`}
+                    ? <>Over by <AnimatedAmount amount={Math.abs(remaining)} currencyCode={currencyCode} /></>
+                    : <><AnimatedAmount amount={remaining} currencyCode={currencyCode} /> left</>}
                 </span>
               </div>
 
@@ -135,7 +136,7 @@ export function DashboardPage() {
                 <div>
                   <p className="text-muted-foreground">Remaining</p>
                   <p className="mt-0.5 font-heading text-foreground">
-                    {formatCurrency(Math.max(remaining, 0), currencyCode)}
+                    <AnimatedAmount amount={Math.max(remaining, 0)} currencyCode={currencyCode} />
                   </p>
                 </div>
                 <div>
@@ -145,7 +146,7 @@ export function DashboardPage() {
                 <div>
                   <p className="text-muted-foreground">Daily pace</p>
                   <p className="mt-0.5 font-heading text-foreground">
-                    {overBudget || dailyPace === null ? '—' : formatCurrency(dailyPace, currencyCode)}
+                    {overBudget || dailyPace === null ? '—' : <AnimatedAmount amount={dailyPace} currencyCode={currencyCode} />}
                   </p>
                 </div>
               </div>
@@ -155,7 +156,7 @@ export function DashboardPage() {
                   className="mt-3 text-xs"
                   style={{ color: projectedTotal > budgetTotal ? 'var(--color-danger)' : 'var(--muted-foreground)' }}
                 >
-                  On track to spend {formatCurrency(projectedTotal, currencyCode)} by month end
+                  On track to spend <AnimatedAmount amount={projectedTotal} currencyCode={currencyCode} /> by month end
                 </p>
               )}
 
@@ -163,13 +164,13 @@ export function DashboardPage() {
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium text-foreground">You</span>
                   <span className="text-muted-foreground">
-                    {formatCurrency(youTotal, currencyCode)} / {formatCurrency(youBudget, currencyCode)}
+                    <AnimatedAmount amount={youTotal} currencyCode={currencyCode} /> / {formatCurrency(youBudget, currencyCode)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium text-foreground">{partner?.display_name ?? 'Partner'}</span>
                   <span className="text-muted-foreground">
-                    {formatCurrency(partnerTotal, currencyCode)} / {formatCurrency(partnerBudget, currencyCode)}
+                    <AnimatedAmount amount={partnerTotal} currencyCode={currencyCode} /> / {formatCurrency(partnerBudget, currencyCode)}
                   </span>
                 </div>
               </div>
@@ -184,7 +185,7 @@ export function DashboardPage() {
           Avg. daily spend — this month
         </p>
         <p className="font-heading text-3xl font-medium text-foreground">
-          {formatCurrency(avgDailySpend, currencyCode)}
+          <AnimatedAmount amount={avgDailySpend} currencyCode={currencyCode} />
         </p>
         <div className="mt-2 h-40">
           <ResponsiveContainer width="100%" height="100%">

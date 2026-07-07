@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import NumberFlow from '@number-flow/react'
 import { CaretRight, CaretDown, Check } from '@phosphor-icons/react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { formatDateLabel } from '../lib/format'
 import { getCurrency, DEFAULT_CURRENCY_CODE } from '../lib/currencies'
 import { parseISODateLocal, toISODateLocal, nextOccurrence } from '../lib/dates'
+import { appendDigit, backspace, unitsToAmount, amountToUnits } from '../lib/amountUnits'
 import type { Expense, Category, CoupleMember, RecurrenceFrequency, RecurringExpense } from '../types'
 import {
   Sheet,
@@ -16,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { NumericKeypad } from '@/components/NumericKeypad'
 
 interface Props {
   isOpen: boolean
@@ -33,13 +36,6 @@ interface Props {
 const SEGMENT_CLASS =
   'flex items-center justify-between gap-1.5 px-4 py-3.5 text-left text-sm font-medium text-foreground outline-none transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50'
 
-function formatAmount(raw: string): string {
-  if (!raw) return ''
-  const [intPart, decPart] = raw.split('.')
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-  return decPart !== undefined ? `${grouped}.${decPart}` : grouped
-}
-
 const FREQUENCY_OPTIONS: { value: RecurrenceFrequency; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
   { value: 'monthly', label: 'Monthly' },
@@ -49,8 +45,9 @@ const FREQUENCY_OPTIONS: { value: RecurrenceFrequency; label: string }[] = [
 export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories, members, recurringExpenses }: Props) {
   const { user, couple } = useAuth()
   const isEdit = !!expense
+  const currency = getCurrency(couple?.currency_code ?? DEFAULT_CURRENCY_CODE)
 
-  const [amount, setAmount] = useState('')
+  const [amountUnits, setAmountUnits] = useState('0')
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
   const [date, setDate] = useState('')
@@ -72,13 +69,13 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
   useEffect(() => {
     if (!isOpen) return
     if (expense) {
-      setAmount(String(expense.amount))
+      setAmountUnits(amountToUnits(expense.amount, currency.decimals))
       setCategory(expense.category)
       setDescription(expense.description)
       setDate(expense.expense_date)
       setPaidBy(expense.paid_by)
     } else {
-      setAmount('')
+      setAmountUnits('0')
       setCategory(categories[0]?.name ?? '')
       setDescription('')
       setDate(new Date().toISOString().split('T')[0])
@@ -94,8 +91,8 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
   }, [isOpen, expense?.id])
 
   async function handleSave() {
-    const amt = parseFloat(amount)
-    if (!amount || isNaN(amt) || amt <= 0) { setError('Enter a valid amount'); return }
+    const amt = unitsToAmount(amountUnits, currency.decimals)
+    if (amt <= 0) { setError('Enter a valid amount'); return }
     if (!category) { setError('Select a category'); return }
     setSaving(true); setError('')
 
@@ -237,21 +234,22 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
             {/* Amount */}
             <div className="flex items-center justify-center gap-1 py-6">
               <span className="font-heading text-2xl font-medium text-muted-foreground">
-                {getCurrency(couple?.currency_code ?? DEFAULT_CURRENCY_CODE).symbol}
+                {currency.symbol}
               </span>
-              <input
-                type="text"
-                inputMode="decimal"
-                placeholder="0.00"
-                value={formatAmount(amount)}
-                onChange={e => {
-                  const raw = e.target.value.replace(/,/g, '')
-                  if (/^\d*\.?\d*$/.test(raw)) setAmount(raw)
-                }}
-                size={Math.max(formatAmount(amount).length, 4)}
-                className="font-heading max-w-full flex-none border-none bg-transparent text-center text-5xl font-medium text-foreground outline-none"
-              />
+              <span className="font-heading text-5xl font-medium text-foreground">
+                <NumberFlow
+                  value={unitsToAmount(amountUnits, currency.decimals)}
+                  locales={currency.locale}
+                  format={{ minimumFractionDigits: currency.decimals, maximumFractionDigits: currency.decimals }}
+                />
+              </span>
             </div>
+
+            <NumericKeypad
+              decimalDisabled={currency.decimals === 0}
+              onDigit={d => setAmountUnits(u => appendDigit(u, d))}
+              onBackspace={() => setAmountUnits(u => backspace(u))}
+            />
 
             {/* Description */}
             <Input

@@ -16,6 +16,7 @@ import { MonthDrawer } from '../components/MonthDrawer'
 import { ExpenseRow } from '../components/ExpenseRow'
 import { UpcomingRecurring } from '../components/UpcomingRecurring'
 import { BudgetProgressBar } from '../components/BudgetProgressBar'
+import { AnimatedAmount } from '../components/AnimatedAmount'
 import { formatCurrency, formatDateLabel } from '../lib/format'
 import { DEFAULT_CURRENCY_CODE } from '../lib/currencies'
 import type { Expense } from '../types'
@@ -161,7 +162,7 @@ export function LogPage() {
               <div>
                 <p className="mb-1.5 text-xs tracking-wide text-muted-foreground uppercase">Today</p>
                 <p className="font-heading text-3xl font-medium text-foreground">
-                  {formatCurrency(summary.todaySpent, couple?.currency_code)}
+                  <AnimatedAmount amount={summary.todaySpent} currencyCode={couple?.currency_code} />
                 </p>
               </div>
               {summary.maxSpendToday !== null && (
@@ -170,8 +171,8 @@ export function LogPage() {
                   style={{ color: summary.todayOverBudget ? 'var(--color-danger)' : 'var(--color-success)' }}
                 >
                   {summary.todayOverBudget
-                    ? `Over by ${formatCurrency(Math.abs(summary.maxSpendToday - summary.todaySpent), couple?.currency_code)}`
-                    : `${formatCurrency(summary.maxSpendToday - summary.todaySpent, couple?.currency_code)} left today`}
+                    ? <>Over by <AnimatedAmount amount={Math.abs(summary.maxSpendToday - summary.todaySpent)} currencyCode={couple?.currency_code} /></>
+                    : <><AnimatedAmount amount={summary.maxSpendToday - summary.todaySpent} currencyCode={couple?.currency_code} /> left today</>}
                 </span>
               )}
             </div>
@@ -179,7 +180,7 @@ export function LogPage() {
             {summary.maxSpendToday !== null && (
               <>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Max today: {formatCurrency(summary.maxSpendToday, couple?.currency_code)}
+                  Max today: <AnimatedAmount amount={summary.maxSpendToday} currencyCode={couple?.currency_code} />
                 </p>
                 <div className="mt-2">
                   <BudgetProgressBar usedPct={summary.todayUsedPct} overBudget={summary.todayOverBudget} />
@@ -189,10 +190,10 @@ export function LogPage() {
 
             <div className="mt-3 flex items-center justify-between text-xs">
               <span className="font-medium text-foreground">
-                You · {formatCurrency(summary.youTodaySpent, couple?.currency_code)}
+                You · <AnimatedAmount amount={summary.youTodaySpent} currencyCode={couple?.currency_code} />
               </span>
               <span className="font-medium text-muted-foreground">
-                {summary.partner?.display_name ?? 'Partner'} · {formatCurrency(summary.partnerTodaySpent, couple?.currency_code)}
+                {summary.partner?.display_name ?? 'Partner'} · <AnimatedAmount amount={summary.partnerTodaySpent} currencyCode={couple?.currency_code} />
               </span>
             </div>
 
