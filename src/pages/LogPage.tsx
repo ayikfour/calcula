@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Plus, X, Receipt, SpinnerGap, CaretDown } from '@phosphor-icons/react'
+import { Receipt, SpinnerGap } from '@phosphor-icons/react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useExpenses } from '../hooks/useExpenses'
@@ -9,10 +9,11 @@ import { useCategories } from '../hooks/useCategories'
 import { useCoupleMembers } from '../hooks/useCoupleMembers'
 import { useRecurringExpenses } from '../hooks/useRecurringExpenses'
 import { useBudgets } from '../hooks/useBudgets'
+import { useExpenseFilters } from '../contexts/ExpenseFiltersContext'
 import { computeBudgetSummary } from '../lib/budgetSummary'
 import { AddExpenseSheet } from '../components/AddExpenseSheet'
 import { FilterDrawer } from '../components/FilterDrawer'
-import { MonthDrawer } from '../components/MonthDrawer'
+import { BottomActionBar } from '../components/BottomActionBar'
 import { ExpenseRow } from '../components/ExpenseRow'
 import { UpcomingRecurring } from '../components/UpcomingRecurring'
 import { BudgetProgressBar } from '../components/BudgetProgressBar'
@@ -34,12 +35,6 @@ import {
 
 const TOAST_COPY = { added: 'Expense added', updated: 'Expense updated', deleted: 'Expense deleted' } as const
 
-// The bottom toolbar floats with no background behind it, so the default
-// variant's opacity-based hover (`hover:bg-primary/80`) lets the page show
-// through and reads as washed-out/transparent. `brightness` darkens the
-// already-opaque button instead of blending with whatever's behind it.
-const TOOLBAR_SOLID_HOVER = 'hover:bg-primary hover:brightness-90'
-
 export function LogPage() {
   const navigate = useNavigate()
   const { user, couple } = useAuth()
@@ -55,10 +50,8 @@ export function LogPage() {
     [expenses, budgets, members, user?.id, now],
   )
 
-  const [filterCategories, setFilterCategories] = useState<string[]>([])
-  const [filterPaidBy, setFilterPaidBy] = useState<string | null>(null)
+  const { selectedMonth, setSelectedMonth, filterCategories, filterPaidBy, setFilters, activeFilterCount } = useExpenseFilters()
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null)
@@ -146,7 +139,6 @@ export function LogPage() {
   }
 
   const catIcons = Object.fromEntries(categories.map(c => [c.name, c.icon]))
-  const activeFilterCount = filterCategories.length + (filterPaidBy ? 1 : 0)
   const hasActiveFilters = activeFilterCount > 0
 
   return (
@@ -279,61 +271,20 @@ export function LogPage() {
         )}
       </div>
 
-      {/* Bottom toolbar: add + filter + month */}
-      <div
-        className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between px-5 pt-3"
-        style={{ paddingBottom: 'calc(16px + var(--safe-bottom))' }}
-      >
-        {editMode ? (
-          <Button
-            onClick={exitEditMode}
-            size="icon"
-            aria-label="Exit edit mode"
-            className={TOOLBAR_SOLID_HOVER}
-          >
-            <X className="size-5" weight="bold" />
-          </Button>
-        ) : (
-          <Button
-            onClick={openAdd}
-            size="icon"
-            aria-label="Add expense"
-            className={TOOLBAR_SOLID_HOVER}
-          >
-            <Plus className="size-5" weight="bold" />
-          </Button>
-        )}
-
-        {editMode ? (
-          <Button
-            variant="destructive"
-            onClick={() => setBulkDeleteOpen(true)}
-            disabled={selectedIds.length === 0}
-            className="bg-destructive text-white hover:bg-destructive hover:brightness-90 dark:bg-destructive dark:hover:bg-destructive disabled:opacity-100 disabled:bg-destructive disabled:saturate-50 disabled:brightness-75 disabled:text-white/70"
-          >
-            {selectedIds.length > 0 ? `Delete (${selectedIds.length})` : 'Delete'}
-          </Button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Button onClick={enterEditMode} className={TOOLBAR_SOLID_HOVER}>Edit</Button>
-            <Button
-              onClick={() => { setFilterDrawerOpen(true); setOpenSwipeRowId(null) }}
-              className={`gap-1.5 ${TOOLBAR_SOLID_HOVER}`}
-            >
-              {hasActiveFilters ? `${activeFilterCount} · Filter` : 'Filter'}
-              <CaretDown className="size-3.5" />
-            </Button>
-            {availableMonths.length > 0 && selectedMonth && (
-              <MonthDrawer
-                months={availableMonths}
-                selectedMonth={selectedMonth}
-                onSelect={m => { setSelectedMonth(m); setOpenSwipeRowId(null) }}
-                triggerClassName={TOOLBAR_SOLID_HOVER}
-              />
-            )}
-          </div>
-        )}
-      </div>
+      <BottomActionBar
+        mode="logs"
+        onAdd={openAdd}
+        activeFilterCount={activeFilterCount}
+        onOpenFilter={() => { setFilterDrawerOpen(true); setOpenSwipeRowId(null) }}
+        availableMonths={availableMonths}
+        selectedMonth={selectedMonth}
+        onSelectMonth={m => { setSelectedMonth(m); setOpenSwipeRowId(null) }}
+        editMode={editMode}
+        onEnterEditMode={enterEditMode}
+        onExitEditMode={exitEditMode}
+        selectedCount={selectedIds.length}
+        onRequestBulkDelete={() => setBulkDeleteOpen(true)}
+      />
 
       <AddExpenseSheet
         isOpen={sheetOpen}
@@ -353,7 +304,7 @@ export function LogPage() {
         currentUserId={user?.id}
         selectedCategories={filterCategories}
         selectedPayer={filterPaidBy}
-        onApply={(cats, payer) => { setFilterCategories(cats); setFilterPaidBy(payer) }}
+        onApply={setFilters}
       />
 
       <Dialog open={!!deletingExpense} onOpenChange={open => !open && setDeletingExpense(null)}>

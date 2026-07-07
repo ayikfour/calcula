@@ -40,16 +40,20 @@ export function computeBudgetSummary({
   members,
   userId,
   now,
+  summaryMonth,
 }: {
   expenses: Expense[]
   budgets: Budget[]
   members: CoupleMember[]
   userId: string | undefined
   now: Date
+  summaryMonth?: Date
 }): BudgetSummary {
-  const thisMonthStart = startOfMonth(now)
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+  const monthBasis = summaryMonth ?? now
+  const thisMonthStart = startOfMonth(monthBasis)
+  const nextMonthStart = new Date(monthBasis.getFullYear(), monthBasis.getMonth() + 1, 1)
+  const lastMonthStart = new Date(monthBasis.getFullYear(), monthBasis.getMonth() - 1, 1)
+  const isCurrentMonth = monthBasis.getFullYear() === now.getFullYear() && monthBasis.getMonth() === now.getMonth()
 
   const todayKey = toISODateLocal(now)
 
@@ -61,7 +65,7 @@ export function computeBudgetSummary({
 
   for (const e of expenses) {
     const d = new Date(e.expense_date + 'T12:00:00')
-    if (d >= thisMonthStart) {
+    if (d >= thisMonthStart && d < nextMonthStart) {
       monthlyTotal += e.amount
       if (e.paid_by) {
         paidByMap.set(e.paid_by, (paidByMap.get(e.paid_by) ?? 0) + e.amount)
@@ -72,7 +76,7 @@ export function computeBudgetSummary({
           paidByTodayMap.set(e.paid_by, (paidByTodayMap.get(e.paid_by) ?? 0) + e.amount)
         }
       }
-    } else if (d >= lastMonthStart && d <= lastMonthEnd) {
+    } else if (d >= lastMonthStart && d < thisMonthStart) {
       lastMonthTotal += e.amount
     }
   }
@@ -90,8 +94,8 @@ export function computeBudgetSummary({
   const partnerBudget = partner ? (budgets.find(b => b.user_id === partner.user_id)?.monthly_amount ?? 0) : 0
   const budgetTotal = youBudget + partnerBudget
 
-  const daysInMonth = getDaysInMonth(now)
-  const dayOfMonth = now.getDate()
+  const daysInMonth = getDaysInMonth(monthBasis)
+  const dayOfMonth = isCurrentMonth ? now.getDate() : daysInMonth
   const daysLeft = daysInMonth - dayOfMonth
   const avgDailySpend = monthlyTotal / dayOfMonth
   const projectedTotal = avgDailySpend * daysInMonth
