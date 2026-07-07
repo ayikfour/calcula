@@ -56,6 +56,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly')
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const [recurringPickerOpen, setRecurringPickerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
@@ -85,6 +86,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
     setFrequency('monthly')
     setCategoryPickerOpen(false)
     setDatePickerOpen(false)
+    setRecurringPickerOpen(false)
     setError('')
     setSaving(false)
     setDeleting(false)
@@ -220,14 +222,41 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
                 <CaretRight className="size-3.5 text-muted-foreground" />
               </button>
               {!alreadyLinked && (
-                <button
-                  type="button"
-                  onClick={() => setIsRecurring(v => !v)}
-                  className={`${SEGMENT_CLASS} ${isRecurring ? 'bg-secondary text-secondary-foreground' : ''}`}
-                >
-                  {isRecurring ? FREQUENCY_OPTIONS.find(f => f.value === frequency)?.label : 'Recurring'}
-                  {isRecurring && <Check className="size-3.5" weight="bold" />}
-                </button>
+                <Popover open={recurringPickerOpen} onOpenChange={setRecurringPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={`${SEGMENT_CLASS} ${isRecurring ? 'bg-secondary text-secondary-foreground' : ''}`}
+                    >
+                      {isRecurring ? FREQUENCY_OPTIONS.find(f => f.value === frequency)?.label : 'Recurring'}
+                      {isRecurring && <Check className="size-3.5" weight="bold" />}
+                      <CaretDown className="size-3.5 text-muted-foreground" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-auto p-0">
+                    <div className="overflow-hidden rounded-lg border border-border">
+                      <button
+                        type="button"
+                        onClick={() => { setIsRecurring(false); setRecurringPickerOpen(false) }}
+                        className="flex w-full items-center justify-between border-b border-border px-4 py-3.5 text-left text-sm font-medium text-foreground last:border-b-0"
+                      >
+                        None
+                        {!isRecurring && <Check className="size-4" weight="bold" />}
+                      </button>
+                      {FREQUENCY_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => { setIsRecurring(true); setFrequency(opt.value); setRecurringPickerOpen(false) }}
+                          className="flex w-full items-center justify-between border-b border-border px-4 py-3.5 text-left text-sm font-medium text-foreground last:border-b-0"
+                        >
+                          {opt.label}
+                          {isRecurring && frequency === opt.value && <Check className="size-4" weight="bold" />}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
             </div>
 
@@ -245,12 +274,6 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
               </span>
             </div>
 
-            <NumericKeypad
-              decimalDisabled={currency.decimals === 0}
-              onDigit={d => setAmountUnits(u => appendDigit(u, d))}
-              onBackspace={() => setAmountUnits(u => backspace(u))}
-            />
-
             {/* Description */}
             <Input
               id="description"
@@ -263,26 +286,12 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
             />
 
             {/* Recurring */}
-            {alreadyLinked ? (
+            {alreadyLinked && (
               <p className="text-xs text-muted-foreground">
                 🔁 {linkedTemplate ? `Recurring · ${FREQUENCY_OPTIONS.find(f => f.value === linkedTemplate.frequency)?.label}` : 'Part of a recurring series'}
                 {' — manage this from Upcoming on the Log page.'}
               </p>
-            ) : isRecurring ? (
-              <div className="overflow-hidden rounded-lg border border-border">
-                {FREQUENCY_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setFrequency(opt.value)}
-                    className="flex w-full items-center justify-between border-b border-border px-4 py-3.5 text-left text-sm font-medium text-foreground last:border-b-0"
-                  >
-                    {opt.label}
-                    {frequency === opt.value && <Check className="size-4" weight="bold" />}
-                  </button>
-                ))}
-              </div>
-            ) : null}
+            )}
 
             {/* Category + Save */}
             <div className="flex items-center gap-2">
@@ -303,6 +312,12 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
             {error && (
               <p className="text-xs text-destructive">{error}</p>
             )}
+
+            <NumericKeypad
+              decimalDisabled={currency.decimals === 0}
+              onDigit={d => setAmountUnits(u => appendDigit(u, d))}
+              onBackspace={() => setAmountUnits(u => backspace(u))}
+            />
 
             {isEdit && (
               <Button
