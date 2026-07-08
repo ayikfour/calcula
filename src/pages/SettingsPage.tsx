@@ -197,8 +197,6 @@ export function SettingsPage() {
         <MonthlyBudgetSheet
           isOpen={budgetSheetOpen}
           onClose={() => setBudgetSheetOpen(false)}
-          userId={user.id}
-          coupleId={couple.couple_id}
           currentAmount={myBudget}
           effectiveMonth={currentMonth}
           refetchBudgets={refetchBudgets}

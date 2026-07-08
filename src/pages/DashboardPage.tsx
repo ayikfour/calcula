@@ -16,6 +16,7 @@ import { toISODateLocal } from '../lib/dates'
 import { DEFAULT_CURRENCY_CODE } from '../lib/currencies'
 import { categoryColor } from '../lib/categoryColors'
 import { AddExpenseSheet } from '../components/AddExpenseSheet'
+import { MonthlyBudgetSheet } from '../components/MonthlyBudgetSheet'
 import { FilterDrawer } from '../components/FilterDrawer'
 import { BottomActionBar } from '../components/BottomActionBar'
 import { Card } from '@/components/ui/card'
@@ -41,11 +42,12 @@ export function DashboardPage() {
   const categories = useCategories()
   const members = useCoupleMembers(couple?.couple_id)
   const { recurringExpenses, refetch: refetchRecurring } = useRecurringExpenses(couple?.couple_id)
-  const { budgets } = useBudgets(couple?.couple_id)
+  const { budgets, refetch: refetchBudgets } = useBudgets(couple?.couple_id)
   const { selectedMonth, setSelectedMonth, filterCategories, filterPaidBy, setFilters, activeFilterCount } = useExpenseFilters()
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
+  const [budgetSheetOpen, setBudgetSheetOpen] = useState(false)
 
   const now = useMemo(() => new Date(), [])
   const currencyCode = couple?.currency_code ?? DEFAULT_CURRENCY_CODE
@@ -175,12 +177,13 @@ export function DashboardPage() {
                 <div className="flex items-start justify-between">
                   <p className="text-sm font-medium text-foreground">Budget</p>
                   {isCurrentMonth ? (
-                    <Link
-                      to="/settings"
+                    <button
+                      type="button"
+                      onClick={() => { playSound('click'); setBudgetSheetOpen(true) }}
                       className="text-xs font-medium text-foreground underline underline-offset-2"
                     >
                       Edit budget
-                    </Link>
+                    </button>
                   ) : (
                     <span
                       className="text-xs font-medium"
@@ -352,6 +355,14 @@ export function DashboardPage() {
         selectedCategories={filterCategories}
         selectedPayer={filterPaidBy}
         onApply={setFilters}
+      />
+
+      <MonthlyBudgetSheet
+        isOpen={budgetSheetOpen}
+        onClose={() => setBudgetSheetOpen(false)}
+        currentAmount={youBudget}
+        effectiveMonth={toISODateLocal(now).slice(0, 7)}
+        refetchBudgets={refetchBudgets}
       />
     </>
   )
