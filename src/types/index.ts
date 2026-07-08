@@ -43,6 +43,7 @@ export interface CoupleMember {
 export interface Budget {
   couple_id: string
   user_id: string
+  effective_month: string
   monthly_amount: number
   updated_at: string
 }

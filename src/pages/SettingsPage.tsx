@@ -10,6 +10,8 @@ import { Slider } from '@/components/ui/slider'
 import { supabase } from '../lib/supabase'
 import { getCurrency, DEFAULT_CURRENCY_CODE } from '../lib/currencies'
 import { formatCurrency } from '../lib/format'
+import { effectiveBudgetFor } from '../lib/budgetSummary'
+import { toISODateLocal } from '../lib/dates'
 import { CurrencyDrawer } from '../components/CurrencyDrawer'
 import { ChangePasswordSheet } from '../components/ChangePasswordSheet'
 import { MonthlyBudgetSheet } from '../components/MonthlyBudgetSheet'
@@ -30,7 +32,8 @@ export function SettingsPage() {
   const [budgetSheetOpen, setBudgetSheetOpen] = useState(false)
 
   const currencyCode = couple?.currency_code ?? DEFAULT_CURRENCY_CODE
-  const myBudget = budgets.find(b => b.user_id === user?.id)?.monthly_amount ?? 0
+  const currentMonth = toISODateLocal(new Date()).slice(0, 7)
+  const myBudget = effectiveBudgetFor(budgets, user?.id, new Date())
 
   useEffect(() => {
     if (!couple) return
@@ -197,6 +200,7 @@ export function SettingsPage() {
           userId={user.id}
           coupleId={couple.couple_id}
           currentAmount={myBudget}
+          effectiveMonth={currentMonth}
           refetchBudgets={refetchBudgets}
         />
       )}

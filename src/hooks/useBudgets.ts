@@ -10,7 +10,7 @@ export function useBudgets(coupleId: string | undefined) {
     if (!coupleId) return
     return supabase
       .from('budgets')
-      .select('couple_id, user_id, monthly_amount, updated_at')
+      .select('couple_id, user_id, effective_month, monthly_amount, updated_at')
       .eq('couple_id', coupleId)
       .then(({ data }) => {
         setBudgets(data ?? [])

@@ -6,6 +6,20 @@ function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1)
 }
 
+// Most recent budget row for `userId` with effective_month <= monthBasis
+// (carry-forward: a month with no explicit row inherits the last one set).
+export function effectiveBudgetFor(budgets: Budget[], userId: string | undefined, monthBasis: Date): number {
+  const targetKey = startOfMonth(monthBasis).getTime()
+  let best: Budget | null = null
+  for (const b of budgets) {
+    if (b.user_id !== userId) continue
+    const rowKey = new Date(b.effective_month + 'T00:00:00').getTime()
+    if (rowKey > targetKey) continue
+    if (!best || rowKey > new Date(best.effective_month + 'T00:00:00').getTime()) best = b
+  }
+  return best?.monthly_amount ?? 0
+}
+
 export interface BudgetSummary {
   monthlyTotal: number
   lastMonthTotal: number
@@ -90,8 +104,8 @@ export function computeBudgetSummary({
   const youTodaySpent = paidByTodayMap.get(userId ?? '') ?? 0
   const partnerTodaySpent = partner ? (paidByTodayMap.get(partner.user_id) ?? 0) : 0
 
-  const youBudget = budgets.find(b => b.user_id === userId)?.monthly_amount ?? 0
-  const partnerBudget = partner ? (budgets.find(b => b.user_id === partner.user_id)?.monthly_amount ?? 0) : 0
+  const youBudget = effectiveBudgetFor(budgets, userId, monthBasis)
+  const partnerBudget = partner ? effectiveBudgetFor(budgets, partner.user_id, monthBasis) : 0
   const budgetTotal = youBudget + partnerBudget
 
   const daysInMonth = getDaysInMonth(monthBasis)
