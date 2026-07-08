@@ -1,37 +1,49 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
-import { PasswordInput } from './PasswordInput'
+import { useAuth } from '../hooks/useAuth'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 interface Props {
   isOpen: boolean
   onClose: () => void
+  currentName: string
 }
 
-export function ChangePasswordSheet({ isOpen, onClose }: Props) {
-  const [newPassword, setNewPassword] = useState('')
+export function ChangeUsernameSheet({ isOpen, onClose, currentName }: Props) {
+  const { couple, user, refreshCouple } = useAuth()
+  const [name, setName] = useState(currentName)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   function handleClose() {
-    setNewPassword('')
+    setName(currentName)
     setError('')
     onClose()
   }
 
   async function handleSave() {
+    if (!couple || !user) return
+    const trimmed = name.trim()
+    if (!trimmed || trimmed === currentName) return
     setSaving(true)
     setError('')
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    const { data, error } = await supabase
+      .from('couple_members')
+      .update({ display_name: trimmed })
+      .eq('couple_id', couple.couple_id)
+      .eq('user_id', user.id)
+      .select()
     setSaving(false)
-    if (error) {
-      setError(error.message || 'Could not update password. Try again.')
+    if (error || !data?.length) {
+      setError(error?.message || 'Could not update name. Try again.')
       return
     }
-    toast('Password updated')
+    await refreshCouple()
+    toast('Name updated')
     handleClose()
   }
 
@@ -39,19 +51,21 @@ export function ChangePasswordSheet({ isOpen, onClose }: Props) {
     <Sheet open={isOpen} onOpenChange={open => !open && handleClose()}>
       <SheetContent side="bottom" className="rounded-t-2xl">
         <SheetHeader>
-          <SheetTitle>Change password</SheetTitle>
+          <SheetTitle>Change your name</SheetTitle>
         </SheetHeader>
 
         <form onSubmit={e => { e.preventDefault(); handleSave() }} className="space-y-3 px-4 pb-4">
           <div className="space-y-1.5">
-            <Label htmlFor="settings-new-password">New password</Label>
-            <PasswordInput
-              id="settings-new-password"
-              autoComplete="new-password"
-              placeholder="At least 6 characters"
-              value={newPassword}
-              onChange={setNewPassword}
+            <Label htmlFor="settings-display-name">Your name</Label>
+            <Input
+              id="settings-display-name"
+              type="text"
+              placeholder="How your partner sees you"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              maxLength={32}
               required
+              className="h-12"
             />
           </div>
 
@@ -66,7 +80,7 @@ export function ChangePasswordSheet({ isOpen, onClose }: Props) {
             type="button"
             onClick={handleSave}
             className="flex-1"
-            disabled={saving || newPassword.length < 6}
+            disabled={saving || !name.trim() || name.trim() === currentName}
           >
             {saving ? 'Saving…' : 'Save'}
           </Button>

@@ -13,14 +13,15 @@ import { formatCurrency } from '../lib/format'
 import { effectiveBudgetFor } from '../lib/budgetSummary'
 import { toISODateLocal } from '../lib/dates'
 import { CurrencyDrawer } from '../components/CurrencyDrawer'
-import { ChangePasswordSheet } from '../components/ChangePasswordSheet'
+import { PasswordSheet } from '../components/PasswordSheet'
+import { ChangeUsernameSheet } from '../components/ChangeUsernameSheet'
 import { MonthlyBudgetSheet } from '../components/MonthlyBudgetSheet'
 import { Button } from '@/components/ui/button'
 import { Check, CaretRight, Copy } from '@phosphor-icons/react'
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { user, couple, refreshCouple, signOut } = useAuth()
+  const { user, couple, hasPassword, refreshCouple, signOut } = useAuth()
   const { budgets, refetch: refetchBudgets } = useBudgets(couple?.couple_id)
   const { enabled: soundEnabled, setEnabled: setSoundEnabled } = useSoundPreference()
   const { volume, setVolume } = useSoundVolume()
@@ -29,6 +30,7 @@ export function SettingsPage() {
   const [copied, setCopied] = useState(false)
   const [currencyDrawerOpen, setCurrencyDrawerOpen] = useState(false)
   const [passwordSheetOpen, setPasswordSheetOpen] = useState(false)
+  const [usernameSheetOpen, setUsernameSheetOpen] = useState(false)
   const [budgetSheetOpen, setBudgetSheetOpen] = useState(false)
 
   const currencyCode = couple?.currency_code ?? DEFAULT_CURRENCY_CODE
@@ -81,12 +83,26 @@ export function SettingsPage() {
           )}
         </div>
 
-        {/* Change password */}
+        {/* Your name */}
+        {couple && (
+          <button
+            onClick={() => { playSound('click'); setUsernameSheetOpen(true) }}
+            className="flex w-full items-center justify-between border-b border-border px-4 py-3.5 text-left last:border-b-0"
+          >
+            <span className="text-base text-foreground">Your name</span>
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <span className="text-sm">{couple.display_name}</span>
+              <CaretRight className="size-3.5" />
+            </span>
+          </button>
+        )}
+
+        {/* Change/create password */}
         <button
           onClick={() => { playSound('click'); setPasswordSheetOpen(true) }}
           className="flex w-full items-center justify-between border-b border-border px-4 py-3.5 text-left last:border-b-0"
         >
-          <span className="text-base text-foreground">Change password</span>
+          <span className="text-base text-foreground">{hasPassword ? 'Change password' : 'Create a password'}</span>
           <CaretRight className="size-3.5 text-muted-foreground" />
         </button>
 
@@ -188,10 +204,19 @@ export function SettingsPage() {
         Sign out
       </Button>
 
-      <ChangePasswordSheet
+      <PasswordSheet
         isOpen={passwordSheetOpen}
         onClose={() => setPasswordSheetOpen(false)}
+        mode={hasPassword ? 'change' : 'create'}
       />
+
+      {couple && (
+        <ChangeUsernameSheet
+          isOpen={usernameSheetOpen}
+          onClose={() => setUsernameSheetOpen(false)}
+          currentName={couple.display_name}
+        />
+      )}
 
       {couple && user && (
         <MonthlyBudgetSheet

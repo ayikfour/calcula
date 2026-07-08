@@ -14,9 +14,11 @@ interface AuthContextValue {
   session: Session | null
   user: User | null
   couple: CoupleInfo | null
+  hasPassword: boolean
   loading: boolean
   signOut: () => Promise<void>
   refreshCouple: () => Promise<void>
+  refreshHasPassword: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -24,6 +26,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [couple, setCouple] = useState<CoupleInfo | null>(null)
+  const [hasPassword, setHasPassword] = useState(false)
   const [loading, setLoading] = useState(true)
   const materializedForCoupleId = useRef<string | null>(null)
 
@@ -39,17 +42,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCouple({ couple_id: data.couple_id, display_name: data.display_name, currency_code })
   }
 
+  async function fetchHasPassword() {
+    const { data } = await supabase.rpc('user_has_password')
+    setHasPassword(data ?? false)
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
-      if (data.session?.user) fetchCouple(data.session.user.id).finally(() => setLoading(false))
-      else setLoading(false)
+      if (data.session?.user) {
+        Promise.all([fetchCouple(data.session.user.id), fetchHasPassword()]).finally(() => setLoading(false))
+      } else {
+        setLoading(false)
+      }
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s)
-      if (s?.user) fetchCouple(s.user.id)
-      else setCouple(null)
+      if (s?.user) {
+        fetchCouple(s.user.id)
+        fetchHasPassword()
+      } else {
+        setCouple(null)
+        setHasPassword(false)
+      }
     })
 
     return () => listener.subscription.unsubscribe()
@@ -74,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, couple, loading, signOut, refreshCouple }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, couple, hasPassword, loading, signOut, refreshCouple, refreshHasPassword: fetchHasPassword }}>
       {children}
     </AuthContext.Provider>
   )
