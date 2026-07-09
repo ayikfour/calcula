@@ -15,6 +15,7 @@ import { formatCurrency } from '../lib/format'
 import { toISODateLocal } from '../lib/dates'
 import { DEFAULT_CURRENCY_CODE } from '../lib/currencies'
 import { categoryColor } from '../lib/categoryColors'
+import { YOU_COLOR, PARTNER_COLOR } from '../lib/personColors'
 import { AddExpenseSheet } from '../components/AddExpenseSheet'
 import { MonthlyBudgetSheet } from '../components/MonthlyBudgetSheet'
 import { FilterDrawer } from '../components/FilterDrawer'
@@ -323,8 +324,8 @@ export function DashboardPage() {
                 )}
               </div>
               <div className="flex h-6 bg-muted">
-                <div className="bg-foreground" style={{ width: `${youPct}%` }} />
-                <div className="bg-muted-foreground" style={{ width: `${100 - youPct}%` }} />
+                <div style={{ width: `${youPct}%`, background: YOU_COLOR }} />
+                <div style={{ width: `${100 - youPct}%`, background: PARTNER_COLOR }} />
               </div>
             </div>
           )}

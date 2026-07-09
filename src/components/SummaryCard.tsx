@@ -1,5 +1,6 @@
 import { CaretRight } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+import { YOU_COLOR, PARTNER_COLOR } from '@/lib/personColors'
 import { AnimatedAmount } from './AnimatedAmount'
 import { BudgetProgressBar } from './BudgetProgressBar'
 
@@ -82,6 +83,30 @@ export function SummaryCard({
               </p>
               <div className="mt-1">
                 <BudgetProgressBar usedPct={pacing.usedPct} overBudget={pacing.overBudget} compact />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {partnerName && (
+          <div
+            className={cn(
+              'grid transition-[grid-template-rows] duration-300 ease-out',
+              compact ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+            )}
+          >
+            <div className={cn('overflow-hidden transition-opacity duration-300 ease-out', compact ? 'opacity-100' : 'opacity-0')}>
+              {/* Who-paid comparison, same continuous two-tone bar as Dashboard's
+                  "Who paid" card (YOU_COLOR/PARTNER_COLOR, no gap) — swaps in
+                  for the compact bar's collapsed pacing detail, scaled to the
+                  compact block height. */}
+              <div className="mt-1.5 flex h-1.5">
+                <div
+                  style={{ width: `${youAmount + partnerAmount > 0 ? (youAmount / (youAmount + partnerAmount)) * 100 : 50}%`, background: YOU_COLOR }}
+                />
+                <div
+                  style={{ width: `${youAmount + partnerAmount > 0 ? (partnerAmount / (youAmount + partnerAmount)) * 100 : 50}%`, background: PARTNER_COLOR }}
+                />
               </div>
             </div>
           </div>

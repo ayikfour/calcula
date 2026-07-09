@@ -737,11 +737,13 @@ Budget section header row: title ("Budget") left, a right-aligned remaining/over
 
 **Not a `Card`** — a full-bleed bar, edge to edge (`px-5` internal padding instead of the page's usual `px-5` outer margin, no rounded corners, no ring border), with the same translucent blurred backdrop `TopNav` uses (`bg-background/80 backdrop-blur-md`) instead of the opaque `bg-card` surface, plus a `border-b border-border` for separation — this keeps text legible over the scrolling list beneath it without looking like a floating card pinned at the screen edges. Header row: date label (small caps, muted) on the left, a trailing `CaretRight` chevron on the right signaling the whole bar is tappable — replacing the old "View all stats →" caption line entirely, matching the chevron convention on Settings' navigable rows and the Budget Reminder Card.
 
-**Two states**, swapped by pin state (see below), both the same `SummaryCard` component, same full-bleed/blur/chevron treatment — only size and pacing detail differ:
-- **Expanded** — the bar's natural, unscrolled position at the top of the page. Bigger Geist amount (`text-3xl`), pacing badge + "Max today" caption + Segmented Progress Bar (`segments={12}`, `compact` height variant — see below), You/Partner split row.
-- **Compact** — engaged once the bar has scrolled under `TopNav` and pinned there. Smaller amount (`text-xl`), tighter vertical rhythm throughout, the pacing badge collapsed to just its numeric text (no Segmented Progress Bar, no "Max today" caption) to keep the pinned bar's footprint small while scrollable content stays visible beneath it.
+**Two states**, swapped by pin state (see below), both the same `SummaryCard` component, same full-bleed/blur/chevron treatment — only size and pacing detail differ. Every property that changes between them (padding, amount font size) transitions over `duration-300 ease-out` rather than snapping, so the pin/unpin moment reads as one bar morphing rather than two different bars swapping — see "Shared-element transition" below.
+- **Expanded** — the bar's natural, unscrolled position at the top of the page. Bigger Geist amount (`text-3xl`), `py-3.5`, pacing badge + "Max today" caption + Segmented Progress Bar (`segments={12}`, `compact` height variant — see below), You/Partner split row.
+- **Compact** — engaged once the bar has scrolled under `TopNav` and pinned there. Smaller amount (`text-xl`), `py-4`, tighter vertical rhythm throughout, the pacing badge collapsed to just its numeric text (no Segmented Progress Bar, no "Max today" caption). In the space that detail collapses out of, a **Who-paid comparison bar** grows in — see below.
 
-**Segmented Progress Bar `compact` prop:** `BudgetProgressBar.tsx` takes an optional `compact?: boolean` that shrinks its block height from `h-6` to `h-1.5` — added specifically for this bar's tighter vertical rhythm without affecting the Dashboard's own (larger, non-compact) usage of the same component.
+**Who-paid comparison bar (compact only):** the same continuous two-tone bar as the Dashboard's "Who paid" card (Identity Color Pair below, proportional widths, no gap, no radius), scaled to `h-1.5` to match the compact block height. Swaps in for the pacing detail's collapsed space specifically because pacing is meaningless for a past date but the You/Partner split is always available, so the compact bar always has something proportional to show regardless of which date is active. Renders only when a partner exists (`partnerName`); at $0/$0 both segments default to a 50/50 split rather than a zero-width bar.
+
+**Segmented Progress Bar `compact` prop:** `BudgetProgressBar.tsx` takes an optional `compact?: boolean` that shrinks its block height from `h-6` to `h-1.5` and its max block width from 12px to 8px (denser blocks at the smaller scale) — added specifically for this bar's tighter vertical rhythm without affecting the Dashboard's own (larger, non-compact) usage of the same component.
 
 **Sticky offset:** `position: sticky`, `top: calc(56px + var(--safe-top))` — 56px is `TopNav`'s actual rendered content height (`py-3.5` padding + an `icon-sm` button, 28px + 28px), not the 64px `AppShell`'s `<main>` assumes for its own padding-top. That 64px figure is stale there too, but harmlessly — it only leaves 8px of invisible extra whitespace at the top of every page. Reusing it here instead of the real 56px would leave an 8px seam between the nav and this bar with scrolled list content visible through it, so this bar intentionally uses its own correct constant (`NAV_HEIGHT` in `LogPage.tsx`) rather than matching `AppShell`'s. **z-index `40`** — between `TopNav`'s `50` and `BottomActionBar`'s `30`, so the nav always wins if they ever overlap during the scroll transition, and the bar always sits above the scrolling list content beneath it (implicit `z-0`).
 
@@ -753,7 +755,9 @@ Budget section header row: title ("Budget") left, a right-aligned remaining/over
 
 **Scroll-anchoring fix:** resizing the bar exactly at the moment it pins (expanded → compact) fights with the browser's default scroll-anchoring — the anchor compensates for a resize on an element it's tracking near the top of the viewport by nudging scroll position, which itself changes the pinned state, producing an infinite snap-back loop right at the pin boundary. Fixed with a single `overflow-anchor: none` on `body` in `index.css`, scoped there rather than globally since nothing else in the app currently relies on scroll anchoring.
 
-No new colors or radii are introduced by this pattern — the blurred backdrop and bottom hairline reuse `TopNav`'s exact treatment, and the pacing badge reuses `--color-success`/`--color-danger`. The compact Segmented Progress Bar height (`h-1.5`) is the one new size value, added as an explicit `compact` variant on the shared component rather than a one-off override.
+**Shared-element transition:** expanded and compact are the same DOM elements with different classes, not two conditionally-mounted trees, so plain CSS transitions on the properties that change (`transition-[padding]` on the bar's padding, `transition-[font-size]` on the amount) animate the pin/unpin moment instead of snapping. The pacing detail block and the who-paid comparison bar both stay mounted at all times (never conditionally rendered on `compact`) and cross-fade via the CSS grid-rows collapse trick — an outer `grid` container animates `grid-template-rows` between `0fr`/`1fr` on `transition-[grid-template-rows]`, wrapping an `overflow-hidden` inner element that also carries a `transition-opacity` — so as one block collapses to zero height the other grows in, rather than either popping in/out instantly. All transitions share `duration-300 ease-out`, matching `TopNav`'s own fade-in timing.
+
+No new radii are introduced by this pattern — the blurred backdrop and bottom hairline reuse `TopNav`'s exact treatment, the pacing badge reuses `--color-success`/`--color-danger`, and the who-paid bar reuses the Identity Color Pair (see below), shared with the Dashboard's own "Who paid" card rather than a one-off pair scoped to just this bar. The compact Segmented Progress Bar height (`h-1.5`) and its 8px max block width are the only new size values, added as an explicit `compact` variant on the shared component rather than a one-off override.
 
 ### Budget Reminder Card
 **Role:** Nudges someone who hasn't set a budget yet to go do so, on the Log screen — `LogPage.tsx`, inline JSX (not its own component file; a single simple card used in exactly one place, so extracting it would be premature abstraction — revisit if the Dashboard ever wants the same nudge)
@@ -801,6 +805,18 @@ A fixed, muted 10-color set — one per seeded category, desaturated enough to s
 | Laundry | `#a8b8c9` (muted blue-gray) |
 
 Used only for chart fills/legends (category bar segments, legend dots) — never for buttons, badges, or backgrounds elsewhere in the app.
+
+### Identity Color Pair (You / Partner)
+**Role:** Distinguishing the two space members in comparison bars — the Log screen's who-paid comparison bar (Sticky Summary Card, compact) and the Dashboard's "Who paid" card (`src/lib/personColors.ts`)
+
+A second, small chromatic exception alongside the Category Color Palette above — same rationale (a proportional two-segment bar needs to read at a glance, monochrome `foreground`/`muted-foreground` doesn't separate the two segments as clearly as the category bar's colors separate categories), same muted/desaturated register so it doesn't compete with indigo, but a fixed **pair** rather than a per-item set, since a space caps at 2 members and colors are assigned by role (`You` vs the other member), not per-person hashing:
+
+| Role | Color |
+|---|---|
+| You | `#8ec98a` (muted sage green) |
+| Partner | `#d992ae` (muted rose) |
+
+Deliberately distinct hues from every Category Color Palette entry above, so the two palettes never coincide when both appear on the same screen (Dashboard shows the category bar directly above the who-paid bar) — reusing an existing category's color for a person would read as a coincidental mistake rather than a deliberate choice. Same usage restriction as the category palette: chart fills only (comparison bar segments), never buttons/badges/backgrounds, and the You/Partner *text* labels next to these bars stay neutral (`text-foreground`/`text-muted-foreground`) — only the bar segments carry color.
 
 ---
 
