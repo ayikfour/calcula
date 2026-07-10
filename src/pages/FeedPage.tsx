@@ -26,7 +26,7 @@ export function FeedPage() {
   // so it doesn't vanish if they back out before this page finishes loading.
   useEffect(() => {
     if (!user?.id) return
-    supabase.from('space_members').update({ feed_last_seen_at: new Date().toISOString() }).eq('user_id', user.id)
+    supabase.from('space_members').update({ feed_last_seen_at: new Date().toISOString() }).eq('user_id', user.id).then()
   }, [user?.id])
 
   function actorName(actorId: string) {
