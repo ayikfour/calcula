@@ -20,7 +20,6 @@ import { AddExpenseSheet } from '../components/AddExpenseSheet'
 import { MonthlyBudgetSheet } from '../components/MonthlyBudgetSheet'
 import { FilterDrawer } from '../components/FilterDrawer'
 import { BottomActionBar } from '../components/BottomActionBar'
-import { Card } from '@/components/ui/card'
 import { BudgetProgressBar } from '@/components/BudgetProgressBar'
 import { AnimatedAmount } from '@/components/AnimatedAmount'
 
@@ -136,10 +135,10 @@ export function DashboardPage() {
 
   return (
     <>
-      <div className="flex flex-col gap-4 px-5 pt-2 pb-24">
+      <div className="flex flex-col pb-24">
         {/* This month + Budget */}
-        <Card className="p-5">
-          <div className="flex items-start justify-between">
+        <div className="border-b border-border px-5 py-5 last:border-b-0">
+          <div className="flex items-start justify-between pb-3">
             <div>
               <p className="mb-1.5 text-xs tracking-wide text-muted-foreground uppercase">
                 {isCurrentMonth ? 'This month' : monthLabel}
@@ -198,7 +197,7 @@ export function DashboardPage() {
                 </div>
 
                 <div className="mt-3">
-                  <BudgetProgressBar usedPct={budgetUsedPct} overBudget={overBudget} />
+                  <BudgetProgressBar usedPct={budgetUsedPct} overBudget={overBudget} compact />
                 </div>
 
                 {isCurrentMonth && (
@@ -252,10 +251,10 @@ export function DashboardPage() {
               </>
             )}
           </div>
-        </Card>
+        </div>
 
         {/* Daily spend, selected month */}
-        <Card className="p-5">
+        <div className="border-b border-border px-5 py-5 last:border-b-0">
           <p className="mb-1.5 text-xs tracking-wide text-muted-foreground uppercase">
             Avg. daily spend — {monthLabel}
           </p>
@@ -277,16 +276,16 @@ export function DashboardPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </Card>
+        </div>
 
         {/* Category breakdown */}
-        <Card className="p-5">
+        <div className="border-b border-border px-5 py-5 last:border-b-0">
           <p className="text-sm font-medium text-foreground">By category — {monthLabel}</p>
           {categoryBreakdown.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">No expenses logged {monthLabel === 'this month' ? 'this month' : 'that month'} yet.</p>
           ) : (
             <>
-              <div className="mt-3 flex h-6 gap-1">
+              <div className="mt-3 flex h-1.5 gap-1">
                 {categoryBreakdown.map(c => (
                   <div key={c.name} className="group relative" style={{ flexGrow: c.value, flexBasis: 0 }}>
                     <div className="h-full" style={{ background: categoryColor(c.name) }} />
@@ -308,10 +307,10 @@ export function DashboardPage() {
               </div>
             </>
           )}
-        </Card>
+        </div>
 
         {/* Who paid more */}
-        <Card className="p-5">
+        <div className="border-b border-border px-5 py-5 last:border-b-0">
           <p className="text-sm font-medium text-foreground">Who paid — {monthLabel}</p>
           {splitTotal === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">No expenses logged {monthLabel === 'this month' ? 'this month' : 'that month'} yet.</p>
@@ -323,13 +322,13 @@ export function DashboardPage() {
                   <span className="font-medium text-muted-foreground">{partner.display_name} · {formatCurrency(partnerTotal, currencyCode)}</span>
                 )}
               </div>
-              <div className="flex h-6 bg-muted">
+              <div className="flex h-1.5 bg-muted">
                 <div style={{ width: `${youPct}%`, background: YOU_COLOR }} />
                 <div style={{ width: `${100 - youPct}%`, background: PARTNER_COLOR }} />
               </div>
             </div>
           )}
-        </Card>
+        </div>
       </div>
 
       <BottomActionBar
