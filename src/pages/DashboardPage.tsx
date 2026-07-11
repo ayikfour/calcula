@@ -12,12 +12,13 @@ import { useBudgets } from '../hooks/useBudgets'
 import { useExpenseFilters } from '../contexts/ExpenseFiltersContext'
 import { computeBudgetSummary } from '../lib/budgetSummary'
 import { formatCurrency } from '../lib/format'
-import { toISODateLocal } from '../lib/dates'
+import { toISODateLocal, parseISODateLocal } from '../lib/dates'
 import { DEFAULT_CURRENCY_CODE } from '../lib/currencies'
 import { categoryColor } from '../lib/categoryColors'
 import { AddExpenseSheet } from '../components/AddExpenseSheet'
 import { MonthlyBudgetSheet } from '../components/MonthlyBudgetSheet'
 import { SpendingHeatmap } from '../components/SpendingHeatmap'
+import { SpendingInsightsCard } from '../components/SpendingInsightsCard'
 import { BottomActionBar } from '../components/BottomActionBar'
 import { BudgetProgressBar } from '@/components/BudgetProgressBar'
 import { AnimatedAmount } from '@/components/AnimatedAmount'
@@ -95,6 +96,17 @@ export function DashboardPage() {
     () => filteredExpenses.filter(e => selectedMonth && e.expense_date.slice(0, 7) === selectedMonth),
     [filteredExpenses, selectedMonth],
   )
+
+  const { lastMonthExpenses, expensesBeforeThisMonth } = useMemo(() => {
+    const thisMonthStart = new Date(summaryMonth.getFullYear(), summaryMonth.getMonth(), 1)
+    const lastMonthStart = new Date(summaryMonth.getFullYear(), summaryMonth.getMonth() - 1, 1)
+    const lastMonthExpenses = filteredExpenses.filter(e => {
+      const d = parseISODateLocal(e.expense_date)
+      return d >= lastMonthStart && d < thisMonthStart
+    })
+    const expensesBeforeThisMonth = filteredExpenses.filter(e => parseISODateLocal(e.expense_date) < thisMonthStart)
+    return { lastMonthExpenses, expensesBeforeThisMonth }
+  }, [filteredExpenses, summaryMonth])
 
   const { dailySpend, categoryBreakdown } = useMemo(() => {
     if (!selectedMonth) return { dailySpend: [], categoryBreakdown: [] }
@@ -235,6 +247,17 @@ export function DashboardPage() {
             )}
           </div>
         </div>
+
+        <SpendingInsightsCard
+          monthExpenses={monthFilteredExpenses}
+          lastMonthExpenses={lastMonthExpenses}
+          expensesBeforeThisMonth={expensesBeforeThisMonth}
+          categories={categories}
+          members={members}
+          userId={user?.id}
+          currencyCode={currencyCode}
+          daysElapsed={summary.dayOfMonth}
+        />
 
         {/* Daily spend, selected month */}
         <div className="border-b border-border px-5 py-5 last:border-b-0">
