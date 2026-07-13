@@ -39,7 +39,7 @@ export function DashboardPage() {
   const { user, space } = useAuth()
   const playSound = useAppSound()
   const { expenses, refetch } = useExpenses(space?.space_id)
-  const categories = useCategories()
+  const [categories, addCategory] = useCategories()
   const members = useSpaceMembers(space?.space_id)
   const { recurringExpenses, refetch: refetchRecurring } = useRecurringExpenses(space?.space_id)
   const { budgets, refetch: refetchBudgets } = useBudgets(space?.space_id)
@@ -345,6 +345,7 @@ export function DashboardPage() {
         onClose={() => setSheetOpen(false)}
         onSaved={handleSaved}
         categories={categories}
+        addCategory={addCategory}
         members={members}
         recurringExpenses={recurringExpenses}
       />

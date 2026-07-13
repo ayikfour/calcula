@@ -20,7 +20,7 @@ export function TopNavMonthFilter() {
   const { user, space } = useAuth()
   const playSound = useAppSound()
   const availableMonths = useAvailableMonths(space?.space_id)
-  const categories = useCategories()
+  const [categories] = useCategories()
   const members = useSpaceMembers(space?.space_id)
   const {
     selectedMonth, setSelectedMonth, filterCategories, filterPaidBy, setFilters, activeFilterCount,

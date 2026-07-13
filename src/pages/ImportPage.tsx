@@ -127,7 +127,7 @@ export function ImportPage() {
   const location = useLocation()
   const fromOnboarding = location.state?.from === 'onboarding'
   const { user, space } = useAuth()
-  const categories = useCategories()
+  const [categories] = useCategories()
   const members = useSpaceMembers(space?.space_id)
   const currency = getCurrency(space?.currency_code ?? 'IDR')
 

@@ -17,7 +17,7 @@ export function FeedPage() {
   const { user, space } = useAuth()
   const { activity, loading } = useExpenseActivity(space?.space_id)
   const members = useSpaceMembers(space?.space_id)
-  const categories = useCategories()
+  const [categories] = useCategories()
   const catIcons = Object.fromEntries(categories.map(c => [c.name, c.icon]))
   const currencyCode = space?.currency_code ?? DEFAULT_CURRENCY_CODE
 

@@ -51,7 +51,7 @@ export function LogPage() {
   const { user, space } = useAuth()
   const { expenses, loading, refetch } = useExpenses(space?.space_id)
   const { activity: recentActivity } = useExpenseActivity(space?.space_id)
-  const categories = useCategories()
+  const [categories, addCategory] = useCategories()
   const members = useSpaceMembers(space?.space_id)
   const { recurringExpenses, refetch: refetchRecurring } = useRecurringExpenses(space?.space_id)
   const { budgets, loading: budgetsLoading } = useBudgets(space?.space_id)
@@ -481,6 +481,7 @@ export function LogPage() {
         onSaved={handleSaved}
         expense={editingExpense}
         categories={categories}
+        addCategory={addCategory}
         members={members}
         recurringExpenses={recurringExpenses}
       />

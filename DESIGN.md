@@ -535,6 +535,62 @@ once there are more than a couple of options, and it keeps every selection
 surface in the app using one consistent pattern. See **Avoid rounded chips**
 below.
 
+A final row, "+ Add category" (`Plus` icon, `text-muted-foreground` instead
+of the selectable rows' `text-foreground` so it reads as a secondary
+utility action rather than another option), sits after the last category
+at the bottom of the same bordered list — same padding/border/tap-target,
+just a different text color. Tapping it closes the Category Picker and
+opens the Add Category Sheet below.
+
+### Add Category Sheet
+**Role:** Add a custom category, opened via the "+ Add category" row at
+the bottom of the Category Picker above — `AddCategorySheet.tsx`
+
+Same shape as the Change Password / Change Username sheets: bottom `Sheet`,
+`SheetHeader`/`SheetTitle` ("Add category"), a `Cancel`/`Save`
+`SheetFooter`. Two fields in the form body: a standard Form Field `Input`
+for the name (required, 24-char max, same `h-12` sizing as Change
+Username's name field), and a bordered trigger row below it — same `h-12`,
+`rounded-[10px] border border-border`, Form-Field-matching background
+(`#1d1d1d`) — showing the currently chosen emoji plus "Choose an emoji" /
+"Change emoji", that expands the Emoji Picker (below) directly beneath it
+when tapped, rather than opening a further nested sheet. Save is disabled
+until both a non-empty trimmed name and an emoji are set; a
+case-insensitive duplicate-name check against every category currently
+visible to the user (bootstrap + the space's own custom categories) blocks
+Save with an inline error, matching the destructive-text inline-error
+convention used by the Add/Edit Expense form. On save, the new category is
+immediately selected in the Add/Edit Expense form and both the Add
+Category sheet and the Category Picker sheet close, returning the user
+straight to the expense form.
+
+Custom categories are visible to, and usable by, both members of a
+space — not private to their creator — since both people log expenses
+against the same category set (see `is_space_mate()` in
+`supabase/migrations/0014_spaces_ownership_model.sql`, applied to
+`categories` in `0018_custom_categories.sql`). This is add-only: there is
+no edit or delete UI for any category (bootstrap or custom) in this pass.
+
+### Emoji Picker
+**Role:** Emoji selection inside the Add Category Sheet —
+`emoji-picker-react`, dynamically imported (`React.lazy`) only once the
+picker trigger is tapped, so it never adds to the initial bundle
+
+Third-party grid widget, not a Genkin-built component, so the "Avoid
+rounded chips" row-list rule doesn't govern its internal layout (a grid of
+emoji tiles with its own search/category-tab UI is a fundamentally
+different, non-text-list interaction). What *is* Genkin-styled is its
+container: wrapped in the same `overflow-hidden rounded-lg border
+border-border` frame used for other embedded dropdown content in the app
+(e.g. the Recurring frequency dropdown in `AddExpenseSheet.tsx`), rendered
+with `theme="dark"`, `previewConfig={{ showPreview: false }}` (no bottom
+preview strip, to keep the footprint compact inside the sheet), and
+`width="100%"` so it fills the sheet's content width rather than the
+package's default fixed pixel width. No skin-tone or emoji-style options
+are exposed — defaults are used as-is, since Genkin's own icon set
+elsewhere in the app is single-style native emoji with no skin-tone
+variation.
+
 ### Filter Drawer
 **Role:** Category and payer filter on the Log screen, opened from a "Filter" button in the toolbar row
 
@@ -851,9 +907,9 @@ A fixed, muted 10-color set — one per seeded category, desaturated enough to s
 | Snack | `#e0a8d8` (muted pink) |
 | Food | `#e8847c` (muted coral) |
 | Services | `#9b8cd9` (muted violet) |
-| Coffee | `#c9976b` (muted tan) |
+| Drink | `#c9976b` (muted tan) |
 | Commute | `#6ba3d6` (muted blue) |
-| Cat | `#d6c178` (muted gold) |
+| Pet | `#d6c178` (muted gold) |
 | Lend | `#7bc9a8` (muted teal) |
 | Health | `#8fd3c7` (muted mint) |
 | Laundry | `#a8b8c9` (muted blue-gray) |

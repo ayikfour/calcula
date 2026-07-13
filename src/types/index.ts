@@ -31,6 +31,7 @@ export interface Category {
   id: number
   name: string
   icon: string
+  created_by: string | null
 }
 
 export interface SpaceMember {

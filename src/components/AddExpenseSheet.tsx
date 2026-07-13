@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import NumberFlow from '@number-flow/react'
-import { CaretRight, CaretDown, Check } from '@phosphor-icons/react'
+import { CaretRight, CaretDown, Check, Plus } from '@phosphor-icons/react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useAppSound } from '../hooks/useAppSound'
@@ -20,6 +20,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { NumericKeypad } from '@/components/NumericKeypad'
+import { AddCategorySheet } from '@/components/AddCategorySheet'
 
 interface Props {
   isOpen: boolean
@@ -27,6 +28,7 @@ interface Props {
   onSaved: (action: 'added' | 'updated' | 'deleted') => void
   expense?: Expense | null
   categories: Category[]
+  addCategory: (name: string, icon: string) => Promise<{ data: Category | null; error: { message: string } | null }>
   members: SpaceMember[]
   recurringExpenses: RecurringExpense[]
 }
@@ -43,7 +45,7 @@ const FREQUENCY_OPTIONS: { value: RecurrenceFrequency; label: string }[] = [
   { value: 'yearly', label: 'Yearly' },
 ]
 
-export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories, members, recurringExpenses }: Props) {
+export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories, addCategory, members, recurringExpenses }: Props) {
   const { user, space } = useAuth()
   const playSound = useAppSound()
   const isEdit = !!expense
@@ -57,6 +59,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
   const [isRecurring, setIsRecurring] = useState(false)
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly')
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false)
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [recurringPickerOpen, setRecurringPickerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -87,6 +90,7 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
     setIsRecurring(false)
     setFrequency('monthly')
     setCategoryPickerOpen(false)
+    setAddCategoryOpen(false)
     setDatePickerOpen(false)
     setRecurringPickerOpen(false)
     setError('')
@@ -382,10 +386,36 @@ export function AddExpenseSheet({ isOpen, onClose, onSaved, expense, categories,
                   </button>
                 )
               })}
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('tap')
+                  // Closing this sheet and opening AddCategorySheet in the same tick
+                  // races Radix's exit animation: the Category Picker's Dialog never
+                  // gets a frame to itself to unmount, so it's left rendered (fully
+                  // visible, data-state="closed") underneath the new sheet. Waiting
+                  // for its close transition (SheetContent's `duration-200`) lets it
+                  // actually unmount before AddCategorySheet mounts.
+                  setCategoryPickerOpen(false)
+                  setTimeout(() => setAddCategoryOpen(true), 200)
+                }}
+                className="flex w-full items-center gap-2 border-b border-border px-4 py-3.5 text-left text-sm font-medium text-muted-foreground last:border-b-0"
+              >
+                <Plus className="size-4" weight="bold" />
+                Add category
+              </button>
             </div>
           </div>
         </SheetContent>
       </Sheet>
+
+      <AddCategorySheet
+        isOpen={addCategoryOpen}
+        onClose={() => setAddCategoryOpen(false)}
+        categories={categories}
+        addCategory={addCategory}
+        onAdded={cat => { setCategory(cat.name); setAddCategoryOpen(false) }}
+      />
     </>
   )
 }
