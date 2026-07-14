@@ -1,8 +1,9 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { SpinnerGap } from '@phosphor-icons/react'
+import { Eye, EyeSlash, SpinnerGap } from '@phosphor-icons/react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
+import { Toggle } from '@/components/ui/toggle'
 import { InsightExportCard } from './InsightExportCard'
 import { captureNodeAsPngBlob } from '../lib/domImage'
 import { useAppSound } from '../hooks/useAppSound'
@@ -28,7 +29,9 @@ export function InsightSharePreviewSheet({ insight, monthLabel, isOpen, onClose 
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [blob, setBlob] = useState<Blob | null>(null)
   const [sharing, setSharing] = useState(false)
+  const [revealed, setRevealed] = useState(false)
   const playSound = useAppSound()
+  const canReveal = Boolean(insight?.detailRevealed || insight?.titleRevealed)
 
   const runCapture = useCallback(async () => {
     const node = exportRef.current
@@ -48,14 +51,23 @@ export function InsightSharePreviewSheet({ insight, monthLabel, isOpen, onClose 
     }
   }, [])
 
+  // Reset to the default relative framing whenever the sheet is pointed at a
+  // different insight, so the "reveal real numbers" choice never leaks from
+  // one insight to the next.
+  useEffect(() => {
+    setRevealed(false)
+  }, [insight?.id])
+
   // Keyed on insight?.id (not the insight object itself) — generateInsights()
   // builds fresh Insight object literals on every recompute (e.g. a realtime
   // expense update), so depending on the object reference would re-trigger
   // (and reset an in-flight or completed) capture on every unrelated
-  // re-render while the sheet is already open for the same insight.
+  // re-render while the sheet is already open for the same insight. Also
+  // re-runs whenever `revealed` toggles so the captured PNG matches the
+  // on-screen preview.
   useEffect(() => {
     if (isOpen && insight) runCapture()
-  }, [isOpen, insight?.id, runCapture])
+  }, [isOpen, insight?.id, revealed, runCapture])
 
   useEffect(() => {
     return () => {
@@ -114,6 +126,20 @@ export function InsightSharePreviewSheet({ insight, monthLabel, isOpen, onClose 
           </div>
 
           <SheetFooter>
+            {canReveal && status !== 'error' && (
+              <div className="flex items-center justify-between px-1">
+                <span className="text-sm text-muted-foreground">Reveal real numbers</span>
+                <Toggle
+                  pressed={revealed}
+                  onPressedChange={setRevealed}
+                  variant="outline"
+                  size="sm"
+                  aria-label={revealed ? 'Hide real numbers' : 'Reveal real numbers'}
+                >
+                  {revealed ? <Eye /> : <EyeSlash />}
+                </Toggle>
+              </div>
+            )}
             {status === 'error' ? (
               <Button type="button" onClick={runCapture}>
                 Try again
@@ -132,7 +158,7 @@ export function InsightSharePreviewSheet({ insight, monthLabel, isOpen, onClose 
           children one render cycle after `open` flips true — the capture
           effect below fires in the same commit as `isOpen` becoming true, so
           a ref nested inside SheetContent wasn't attached yet when it ran. */}
-      {insight && <InsightExportCard ref={exportRef} insight={insight} monthLabel={monthLabel} />}
+      {insight && <InsightExportCard ref={exportRef} insight={insight} monthLabel={monthLabel} revealed={revealed} />}
     </Fragment>
   )
 }

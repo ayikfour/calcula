@@ -12,19 +12,26 @@ interface Props {
   monthLabel?: string
   /** Makes the whole card a tap target that opens the share sheet — card size only. Also shows the export icon hint and the border beam pulse. */
   onTap?: () => void
+  /** Shows `titleRevealed`/`detailRevealed` (raw currency amounts) instead of the default relative framing. Defaults to false. */
+  revealed?: boolean
 }
 
 // Single kanji per insight, chosen for its literal meaning (expense, peak,
 // bottom, pay, rest, new, average, week...) — a decorative background
 // glyph, not a translation of the copy.
 const INSIGHT_KANJI: Record<string, string> = {
+  milestone: '続',
+  recap: '総',
+  'spending-persona': '型',
   'top-category': '費',
   'partner-category-comparison': '対',
   'highest-day': '山',
   'lowest-day': '底',
   'biggest-expense': '大',
   'category-mom-change': '増',
+  'category-mom-drop': '減',
   'who-paid-more': '払',
+  'no-spend-streak': '禅',
   'no-spend-days': '休',
   'logging-streak': '連',
   'new-category': '新',
@@ -37,13 +44,18 @@ const INSIGHT_KANJI: Record<string, string> = {
 // footer width. These stay under ~10 characters so the footer always fits
 // on one line at both the card and export sizes.
 const INSIGHT_SHORT_LABEL: Record<string, string> = {
+  milestone: 'MILESTONE',
+  recap: 'WRAPPED',
+  'spending-persona': 'PERSONA',
   'top-category': 'TOP CAT',
   'partner-category-comparison': 'VS PARTNER',
   'highest-day': 'PEAK DAY',
   'lowest-day': 'QUIET DAY',
   'biggest-expense': 'BIG SPEND',
   'category-mom-change': 'TREND',
+  'category-mom-drop': 'COOLDOWN',
   'who-paid-more': 'WHO PAID',
+  'no-spend-streak': 'DRY SPELL',
   'no-spend-days': 'NO SPEND',
   'logging-streak': 'STREAK',
   'new-category': 'NEW CAT',
@@ -91,9 +103,16 @@ function Barcode({ seed, scale = 1 }: { seed: string; scale?: number }) {
   )
 }
 
-export function InsightTicket({ insight, size, index, total, monthLabel, onTap }: Props) {
+export function InsightTicket({ insight, size, index, total, monthLabel, onTap, revealed = false }: Props) {
   const kanji = INSIGHT_KANJI[insight.id] ?? '銭'
   const shortLabel = INSIGHT_SHORT_LABEL[insight.id] ?? insight.id
+  const title = revealed ? (insight.titleRevealed ?? insight.title) : insight.title
+  const detail = revealed ? (insight.detailRevealed ?? insight.detail) : insight.detail
+  // Spoken description for screen readers: prefer the detail line, but for
+  // stat-list cards (recap) the detail is empty, so read the stats instead of
+  // leaving a bare title.
+  const spokenBody = detail || insight.stats?.map(s => `${s.label}: ${s.value}`).join('. ') || ''
+  const spoken = spokenBody ? `${title}. ${spokenBody}` : title
 
   if (size === 'export') {
     return (
@@ -119,9 +138,28 @@ export function InsightTicket({ insight, size, index, total, monthLabel, onTap }
               where the header row's `uppercase` bleeds into this sibling block
               in the captured PNG, even though it doesn't in the live DOM. */}
           <div className="flex flex-1 flex-col justify-center normal-case">
-            <div className="flex size-32 items-center justify-center rounded-2xl bg-muted text-7xl">{insight.emoji}</div>
-            <p className="mt-10 font-heading text-[52px] leading-[1.15] font-medium text-foreground">{insight.title}</p>
-            <p className="mt-6 text-[32px] leading-relaxed text-muted-foreground">{insight.detail}</p>
+            {insight.stats ? (
+              <>
+                <div className="flex items-center gap-6">
+                  <div className="flex size-24 items-center justify-center rounded-2xl bg-muted text-6xl">{insight.emoji}</div>
+                  <p className="font-heading text-[52px] leading-[1.15] font-medium text-foreground">{title}</p>
+                </div>
+                <dl className="mt-12 flex flex-col">
+                  {insight.stats.map(stat => (
+                    <div key={stat.label} className="flex items-baseline justify-between gap-6 border-t border-border py-6 last:border-b">
+                      <dt className="font-mono text-[24px] tracking-[0.15em] text-muted-foreground uppercase">{stat.label}</dt>
+                      <dd className="font-heading text-[40px] font-medium text-foreground">{stat.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </>
+            ) : (
+              <>
+                <div className="flex size-32 items-center justify-center rounded-2xl bg-muted text-7xl">{insight.emoji}</div>
+                <p className="mt-10 font-heading text-[52px] leading-[1.15] font-medium text-foreground">{title}</p>
+                <p className="mt-6 text-[32px] leading-relaxed text-muted-foreground">{detail}</p>
+              </>
+            )}
           </div>
 
           <div className="flex items-center justify-between border-t border-border pt-6 text-muted-foreground/60">
@@ -129,7 +167,10 @@ export function InsightTicket({ insight, size, index, total, monthLabel, onTap }
               <Barcode seed={insight.id} scale={4} />
               <span className="font-mono text-[20px] tracking-[0.15em] uppercase">{shortLabel}</span>
             </div>
-            <span className="font-mono text-[20px] tracking-[0.15em] uppercase">Verified ✓</span>
+            <div className="flex items-center gap-4">
+              <span className="font-mono text-[20px] tracking-[0.15em] uppercase">Genkin</span>
+              <span className="font-mono text-[20px] tracking-[0.15em] uppercase">Verified ✓</span>
+            </div>
           </div>
         </div>
       </div>
@@ -139,7 +180,7 @@ export function InsightTicket({ insight, size, index, total, monthLabel, onTap }
   return (
     <div
       className={`relative isolate h-64 w-full shrink-0 snap-center overflow-hidden ${onTap ? 'cursor-pointer' : ''}`}
-      aria-label={onTap ? `${insight.title}. ${insight.detail}. Tap to share.` : `${insight.title}. ${insight.detail}`}
+      aria-label={onTap ? `${spoken}. Tap to share.` : spoken}
       role={onTap ? 'button' : undefined}
       onClick={onTap}
     >
@@ -172,11 +213,28 @@ export function InsightTicket({ insight, size, index, total, monthLabel, onTap }
 
         <div className="mt-2 border-t border-border" />
 
-        <div className="mt-4">
-          <div className="flex size-11 items-center justify-center rounded-lg bg-muted text-2xl">{insight.emoji}</div>
-          <p className="mt-3 font-heading text-sm font-medium text-foreground">{insight.title}</p>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{insight.detail}</p>
-        </div>
+        {insight.stats ? (
+          <div className="mt-4">
+            <div className="flex items-center gap-2">
+              <div className="flex size-8 items-center justify-center rounded-md bg-muted text-lg">{insight.emoji}</div>
+              <p className="font-heading text-sm font-medium text-foreground">{title}</p>
+            </div>
+            <dl className="mt-3 flex flex-col">
+              {insight.stats.map(stat => (
+                <div key={stat.label} className="flex items-baseline justify-between gap-2 border-t border-border py-1.5 last:border-b">
+                  <dt className="font-mono text-[10px] tracking-[0.15em] text-muted-foreground uppercase">{stat.label}</dt>
+                  <dd className="font-heading text-xs font-medium text-foreground">{stat.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ) : (
+          <div className="mt-4">
+            <div className="flex size-11 items-center justify-center rounded-lg bg-muted text-2xl">{insight.emoji}</div>
+            <p className="mt-3 font-heading text-sm font-medium text-foreground">{title}</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{detail}</p>
+          </div>
+        )}
 
         <div className="mt-auto flex items-center justify-between border-t border-border pt-2 text-muted-foreground/60">
           <div className="flex items-center gap-1.5">
