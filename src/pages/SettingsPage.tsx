@@ -8,6 +8,7 @@ import { useSoundPreference } from '../hooks/useSoundPreference'
 import { useSoundVolume } from '../hooks/useSoundVolume'
 import { useAppSound } from '../hooks/useAppSound'
 import { Slider } from '@/components/ui/slider'
+import { Input } from '@/components/ui/input'
 import { supabase } from '../lib/supabase'
 import { getCurrency, DEFAULT_CURRENCY_CODE } from '../lib/currencies'
 import { formatCurrency } from '../lib/format'
@@ -49,6 +50,9 @@ export function SettingsPage() {
   const [switchSpaceSheetOpen, setSwitchSpaceSheetOpen] = useState(false)
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
   const [leaving, setLeaving] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarError, setAvatarError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -134,6 +138,22 @@ export function SettingsPage() {
     await refreshSpace()
     setLeaveDialogOpen(false)
     toast("You've left the space")
+  }
+
+  async function handleDeleteAccount() {
+    if (!user) return
+    setDeleting(true)
+    if (space?.avatar_url) {
+      // Best-effort — the account gets deleted either way even if this fails.
+      await removeAvatar(user.id).catch(() => {})
+    }
+    const { error } = await supabase.rpc('delete_own_account')
+    if (error) {
+      setDeleting(false)
+      toast('Could not delete your account')
+      return
+    }
+    await supabase.auth.signOut()
   }
 
   return (
@@ -324,6 +344,15 @@ export function SettingsPage() {
             <CaretRight className="size-3.5 text-muted-foreground" />
           </button>
         )}
+
+        {/* Delete account */}
+        <button
+          onClick={() => { playSound('click'); setDeleteDialogOpen(true) }}
+          className="flex w-full items-center justify-between px-4 py-3.5 text-left"
+        >
+          <span className="text-base text-destructive">Delete account</span>
+          <CaretRight className="size-3.5 text-muted-foreground" />
+        </button>
       </div>
 
       {/* Sign out */}
@@ -385,6 +414,42 @@ export function SettingsPage() {
             </DialogClose>
             <Button variant="destructive" onClick={handleLeave} disabled={leaving}>
               {leaving ? 'Leaving…' : 'Leave'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={open => { setDeleteDialogOpen(open); if (!open) setDeleteConfirmText('') }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete your account?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes your account and all of your expenses,
+              budget, and recurring expenses. This can't be undone.
+              {members.length > 1 &&
+                " Your space-mate's own data is unaffected — only your shared space membership ends."}
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={deleteConfirmText}
+            onChange={e => setDeleteConfirmText(e.target.value)}
+            placeholder="Type DELETE to confirm"
+            aria-label="Type DELETE to confirm account deletion"
+            autoComplete="off"
+          />
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="secondary">Cancel</Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={deleting || deleteConfirmText.trim().toLowerCase() !== 'delete'}
+            >
+              {deleting ? 'Deleting…' : 'Delete account'}
             </Button>
           </DialogFooter>
         </DialogContent>
